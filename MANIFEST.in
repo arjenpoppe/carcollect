@@ -1,0 +1,4 @@
+include carcollect/schema.sql
+graft carcollect/static
+graft carcollect/templates
+global-exclude *.pyc
