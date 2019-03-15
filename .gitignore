@@ -2,6 +2,8 @@
 .idea/usage.statistics.xml
 .idea/tasks.xml
 
+carcollect/uploads/
+
 venv/
 
 *.pyc

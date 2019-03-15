@@ -2,6 +2,7 @@ import os
 
 from flask import Flask
 from . import db
+from . import analyze
 
 
 def create_app(test_config=None):
@@ -11,6 +12,7 @@ def create_app(test_config=None):
         SECRET_KEY='dev',
         DATABASE=os.path.join(app.instance_path, 'carcollect.sqlite'),
     )
+    app.config['UPLOAD_FOLDER'] = 'D://uploads'
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
@@ -32,5 +34,8 @@ def create_app(test_config=None):
 
     # register close_db and init_db_command with application
     db.init_app(app)
+
+    # register blueprints
+    app.register_blueprint(analyze.bp)
 
     return app
