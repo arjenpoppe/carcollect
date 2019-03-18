@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}{{filename}}.{{extension}}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <img src="{{url_for('static', filename='plots/{}.png'.format(filename))}}"/>
+{% endblock %}

@@ -16,6 +16,7 @@ from carcollect.db import get_db
 bp = Blueprint('analyze', __name__, url_prefix='/analyze')
 
 ALLOWED_EXTENSIONS = set(['mp3', 'wav'])
+# current_app.config['PLOT_FOLDER'] = '/plots'
 
 
 def allowed_file(filename):
@@ -23,8 +24,8 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@bp.route('/upload_file', methods=('GET', 'POST'))
-def upload_file():
+@bp.route('/upload', methods=('GET', 'POST'))
+def upload():
     if request.method == 'POST':
         # check if the post request has the file part
         if 'file' not in request.files:
@@ -44,15 +45,31 @@ def upload_file():
     return render_template('analyze/upload_file.html')
 
 
+@bp.route('/uploads')
+def uploads():
+    filelist = os.listdir(current_app.config['UPLOAD_FOLDER'])
+
+    return render_template('analyze/uploads.html', filelist=filelist)
+
+
 @bp.route('/uploads/<filename>', methods=('GET', 'POST'))
 def uploaded_file(filename):
-    return render_template('analyze/uploads.html', filename=filename)
+    plot_fft(filename)
+    name = filename.split('.')[0]
+    extension = filename.split('.')[1]
+
+    return render_template('analyze/uploaded_file.html', filename=name, extension=extension)
+
+
+def plot_fft(filename):
+    rate, data = wav.read('{}/{}'.format(current_app.config['UPLOAD_FOLDER'], filename))
+    fft_out = fft(data)
+
+    plt.plot(data, np.abs(fft_out))
+    plt.savefig('{}/{}.png'.format(current_app.config['PLOT_FOLDER'], filename.split('.')[0]))
 
 
 @bp.route('/fft_test', methods=('GET', 'POST'))
 def fft_test():
-    rate, data = wav.read('{}/test.wav'.format(current_app.config['UPLOAD_FOLDER']))
-    fft_out = fft(data)
 
-    plt.plot(data, np.abs(fft_out))
-    plt.show()
+    return render_template('analyze/fft_test.html')
