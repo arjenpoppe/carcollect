@@ -4,6 +4,8 @@
 
 carcollect/uploads/
 
+.env
+
 venv/
 
 *.pyc
