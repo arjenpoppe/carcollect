@@ -5,7 +5,9 @@
 {% endblock %}
 
 {% block content %}
+<ul>
   {% for file in filelist %}
-    <a href="{{url_for('analyze.uploaded_file', filename=file)}}">{{file}}</a>
+  <li><a href="{{url_for('analyze.uploaded_file', filename=file)}}">{{file}}</a></li>
   {% endfor %}
+</ul>
 {% endblock %}
