@@ -48,7 +48,7 @@ def init_app(app):
 
 @click.command('fill-db')
 @with_appcontext
-def fill_db(rows=2000000):
+def fill_db(rows=200):
     db = get_db()
 
     for n in range(rows):
@@ -73,5 +73,13 @@ def get_random_db_entry():
 
 
 def get_from_database(table, columns="*", where=None, param=None):
+
+    db = get_db()
+    data = db.execute('SELECT')
+
+
+
+
+
     return None
 

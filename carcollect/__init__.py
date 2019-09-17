@@ -39,9 +39,10 @@ def create_app(test_config=None):
     # register close_db and init_db_command with application
     db.init_app(app)
 
+
     # register blueprints
     app.register_blueprint(analyze.bp)
-    app.register_blueprint(sort.py)
+    app.register_blueprint(sort.bp)
 
     # fill database with random data
     # filldb(2000000)
