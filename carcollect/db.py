@@ -1,4 +1,5 @@
 import sqlite3
+import random
 
 import click
 from flask import current_app, g
@@ -41,4 +42,36 @@ def init_db_command():
 def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+    app.cli.add_command(get_random_db_entry)
+    app.cli.add_command(fill_db)
+
+
+@click.command('fill-db')
+@with_appcontext
+def fill_db(rows=2000000):
+    db = get_db()
+
+    for n in range(rows):
+        filename = '{}{}{}'.format("testfile_", n, ".wav")
+        severity = random.randint(0, 10)
+        probability = random.randint(0, 100)
+
+        db.execute(
+            'INSERT INTO result (filename, severity, probability) VALUES (?, ?, ?)',
+            (filename, severity, probability)
+        )
+    db.commit()
+    click.echo("Database filled with random data")
+
+
+@click.command('test-db')
+@with_appcontext
+def get_random_db_entry():
+    db = get_db()
+    testdata = db.execute('SELECT * FROM result WHERE filename = ?', ('testfile_{}.wav'.format(random.randint(0, 2000000)),)).fetchone()
+    click.echo('{}, {}, {}'.format(testdata['filename'], testdata['severity'], testdata['probability']))
+
+
+def get_from_database(table, columns="*", where=None, param=None):
+    return None
 

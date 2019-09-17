@@ -1,8 +1,11 @@
 import os
 
 from flask import Flask, render_template
-from . import db
+
+from . import sort
 from . import analyze
+
+from carcollect.db import get_db
 
 
 def create_app(test_config=None):
@@ -14,7 +17,6 @@ def create_app(test_config=None):
     )
     app.config['UPLOAD_FOLDER'] = 'carcollect/static/uploads'
     app.config['PLOT_FOLDER'] = 'carcollect/static/plots'
-
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
@@ -39,5 +41,10 @@ def create_app(test_config=None):
 
     # register blueprints
     app.register_blueprint(analyze.bp)
+    app.register_blueprint(sort.py)
+
+    # fill database with random data
+    # filldb(2000000)
 
     return app
+

@@ -102,7 +102,7 @@ def plot_waveform(filename):
     fft_freqs_side = np.array(freqs_side)
     plt.subplot(311)
     p1 = plt.plot(t, signal, "g")  # plotting the signal
-    plt.xlabel('Time')
+    plt.xlabel('Time [in 100 miliseconds]')
     plt.ylabel('Amplitude')
     plt.subplot(312)
     p2 = plt.plot(freqs, FFT, "r")  # plotting the complete fft spectrum
