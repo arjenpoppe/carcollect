@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
-    <a href="{{ url_for('analyze.upload')}}">Upload</a>
-    <a href="{{ url_for('analyze.uploads')}}">Uploads</a>
+    <a href="{{ url_for('filemanager.upload')}}">Upload</a>
+    <a href="{{ url_for('filemanager.uploads')}}">Uploads</a>
+    <a href="{{ url_for('analyze.show_overview')}}">Analyze audiofile</a>
 {% endblock %}

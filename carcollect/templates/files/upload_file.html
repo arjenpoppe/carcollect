@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Upload new File{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method=post enctype=multipart/form-data>
+      {% if allowed_extensions %}
+          Extensions allowed:
+          {% for extension in allowed_extensions %}
+            {{extension}}
+          {% endfor %}
+      {% endif %}
+      <input type=file name=file required>
+      <input type=text name=path>
+      <input type=submit value=Upload>
+  </form>
+    <a href="{{url_for('analyze.show_overview')}}">back</a>
+{% endblock %}

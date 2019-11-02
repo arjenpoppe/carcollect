@@ -48,7 +48,8 @@ def init_app(app):
 
 @click.command('fill-db')
 @with_appcontext
-def fill_db(rows=200):
+def fill_db(rows=500000):
+    init_db()
     db = get_db()
 
     for n in range(rows):
@@ -68,8 +69,8 @@ def fill_db(rows=200):
 @with_appcontext
 def get_random_db_entry():
     db = get_db()
-    testdata = db.execute('SELECT * FROM result WHERE filename = ?', ('testfile_{}.wav'.format(random.randint(0, 2000000)),)).fetchone()
-    click.echo('{}, {}, {}'.format(testdata['filename'], testdata['severity'], testdata['probability']))
+    testdata = db.execute('SELECT * FROM result WHERE filename = ?', ('testfile_{}.wav'.format(random.randint(0, 200)),)).fetchone()
+    click.echo('filename: {}, severity: {}, probability: {}'.format(testdata['filename'], testdata['severity'], testdata['probability']))
 
 
 def get_from_database(table, columns="*", where=None, param=None):

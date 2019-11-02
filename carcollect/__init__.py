@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, render_template
 
+from carcollect import filemanager
 from . import sort
 from . import analyze
 
@@ -15,7 +16,7 @@ def create_app(test_config=None):
         SECRET_KEY='dev',
         DATABASE=os.path.join(app.instance_path, 'carcollect.sqlite'),
     )
-    app.config['UPLOAD_FOLDER'] = 'carcollect/static/uploads'
+    app.config['UPLOAD_FOLDER'] = os.path.normpath('carcollect/static/uploads')
     app.config['PLOT_FOLDER'] = 'carcollect/static/plots'
 
     if test_config is None:
@@ -36,16 +37,17 @@ def create_app(test_config=None):
     def index():
         return render_template('index.html')
 
+    @app.route('/hello')
+    def hello():
+        return render_template('Hello, World!')
+
     # register close_db and init_db_command with application
     db.init_app(app)
-
 
     # register blueprints
     app.register_blueprint(analyze.bp)
     app.register_blueprint(sort.bp)
-
-    # fill database with random data
-    # filldb(2000000)
+    app.register_blueprint(filemanager.bp)
 
     return app
 

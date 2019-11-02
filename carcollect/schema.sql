@@ -1,5 +1,4 @@
 DROP TABLE IF EXISTS result;
-DROP TABLE IF EXISTS user;
 
 CREATE TABLE result (
   filename TEXT PRIMARY KEY,

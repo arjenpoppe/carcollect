@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Analyze overview{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<ul>
+    <li><a href="{{url_for('analyze.audiofile_uploads', dir='analyze')}}">uploads</a></li>
+    <li><a href="{{url_for('analyze.audiofile_upload')}}">upload</a></li>
+</ul>
+{% endblock %}

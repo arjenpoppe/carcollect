@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Sorting test{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    {% if errors|length > 0 %}
+        Error messages:
+        <ul>
+          {% for error in errors %}
+            <li>{{error}}</li>
+          {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if message %}
+        {{message}}
+    {% endif %}
+
+    {% if result|length > 0 %}
+        Results:
+        <ul>
+          {% for value in result %}
+            <li>{{value}}</li>
+          {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
