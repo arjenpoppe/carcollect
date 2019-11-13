@@ -24,13 +24,13 @@ def save_file(path, file):
 
 # Generic upload page. Can be used for specific extensions and paths
 @bp.route('/upload', methods=('GET', 'POST'))
-def upload(path='', allowed_extensions=set([])):
+def upload(path='', allowed_extensions=[]):
     print(path, allowed_extensions)
     if request.method == 'POST':
 
         # check if the post request has the file part
         if 'file' not in request.files:
-            flash('No file part')
+            flash('No file found')
             return redirect(request.url)
         file = request.files['file']
 
@@ -44,13 +44,15 @@ def upload(path='', allowed_extensions=set([])):
             filename = save_file(path, file)
             flash('file {} uploaded successfully'.format(filename))
 
-            # TODO: fix redirection
             # return redirect(url_for('filemanager.uploaded_file', filename=filename))
+    if allowed_extensions:
+        flashmsg = "Allowed extensions: " + ", ".join(allowed_extensions)
+        flash(flashmsg)
     return render_template('files/upload_file.html', allowed_extensions=allowed_extensions)
 
 
 @bp.route('/')
-@bp.route('/<dir>', methods=('GET', 'POST'))
+@bp.route('/<dir>')
 def uploads(dir=''):
     path = os.path.join(current_app.config['UPLOAD_FOLDER'], dir)
 
@@ -63,7 +65,7 @@ def uploads(dir=''):
         return uploaded_file(dir)
 
 
-@bp.route('/<filename>', methods=('GET', 'POST'))
+@bp.route('/<filename>')
 def uploaded_file(filename):
     name = filename.split('.')[0]
     extension = filename.split('.')[1]

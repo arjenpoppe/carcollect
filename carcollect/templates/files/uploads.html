@@ -5,10 +5,22 @@
 {% endblock %}
 
 {% block content %}
-{{ data }}
-<ul>
-  {% for file in filelist %}
-  <li><a href="{{url_for('filemanager.uploaded_file', filename=file)}}">{{file}}</a></li>
-  {% endfor %}
-</ul>
+<div class="table-responsive">
+	<table class="table table-hover table-sm">
+	  	<thead>
+	    	<tr>
+	      		<th scope="col">Filename</th>
+	      		<th scope="col">Actions</th>
+	    	</tr>
+	  	</thead>
+	  	<tbody>
+	    	{% for file in filelist %}
+			    <tr>
+			      	<td><a href="{{url_for('filemanager.uploaded_file', filename=file)}}">{{file}}</a></td>
+			      	<td><a href="#" class="btn btn-primary">Some action</a></td>
+			    </tr>
+			{% endfor %}
+	  	</tbody>
+	</table>
+</div>
 {% endblock %}

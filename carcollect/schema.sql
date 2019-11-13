@@ -5,3 +5,8 @@ CREATE TABLE result (
   severity INTEGER NOT NULL,
   probability INTEGER NOT NULL
 );
+
+CREATE TABLE user (
+  username TEXT PRIMARY KEY,
+  password TEXT NOT NULL
+);

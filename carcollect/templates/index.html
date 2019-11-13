@@ -1,11 +1,5 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}Temp_index{% endblock %}</h1>
-{% endblock %}
-
-{% block content %}
-    <a href="{{ url_for('filemanager.upload')}}">Upload</a>
-    <a href="{{ url_for('filemanager.uploads')}}">Uploads</a>
-    <a href="{{ url_for('analyze.show_overview')}}">Analyze audiofile</a>
+  {% block title %}Temp index{% endblock %}
 {% endblock %}

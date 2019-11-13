@@ -16,14 +16,8 @@ from carcollect.filemanager import upload, uploads
 
 bp = Blueprint('analyze', __name__, url_prefix='/analyze')
 
-ALLOWED_EXTENSIONS = set(['mp3', 'wav'])
+ALLOWED_EXTENSIONS = ['mp3', 'wav']
 PATH = 'analyze'
-
-
-# index page for the sound analysis process
-@bp.route('/')
-def show_overview():
-    return render_template('analyze/overview.html')
 
 
 # reroute to the upload page
@@ -116,11 +110,13 @@ def save_plot(plt, filename):
 
 
 # Main method that initiates the sound analysis
-@bp.route('/plot/<filename>', methods=('GET', 'POST'))
-def plot_waveform(filename):
-    try:
-        plot_graphs(filename)
-    except ValueError:
-        flash('Cannot read file, make sure the file uses a .wav or .mp3 format')
+@bp.route('/plot', methods=('GET', 'POST'))
+def plot_waveform():
+    if request.method == "POST":
+        filename = request.form["filename"]
+        try:
+            plot_graphs(filename)
+        except ValueError:
+            flash('Cannot read file, make sure the file uses a .wav or .mp3 format')
 
     return redirect(url_for('filemanager.uploaded_file', filename=filename))

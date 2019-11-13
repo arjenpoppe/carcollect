@@ -1,10 +1,12 @@
 import os
 
 from flask import Flask, render_template
+from datetime import timedelta
 
-from carcollect import filemanager
+from . import filemanager
 from . import sort
 from . import analyze
+from . import account
 
 from carcollect.db import get_db
 
@@ -12,6 +14,7 @@ from carcollect.db import get_db
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+    app.permanent_session_lifetime = timedelta(minutes=5)
     app.config.from_mapping(
         SECRET_KEY='dev',
         DATABASE=os.path.join(app.instance_path, 'carcollect.sqlite'),
@@ -48,6 +51,7 @@ def create_app(test_config=None):
     app.register_blueprint(analyze.bp)
     app.register_blueprint(sort.bp)
     app.register_blueprint(filemanager.bp)
+    app.register_blueprint(account.bp)
 
     return app
 
