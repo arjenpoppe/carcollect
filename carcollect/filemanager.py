@@ -19,8 +19,21 @@ def allowed_file(filename, allowed_extensions):
 
 
 def save_file(path, file):
+    """Summary
+    
+    Args:
+        path (TYPE): Description
+        file (TYPE): Description
+    
+    Returns:
+        TYPE: Description
+    """
     filename = secure_filename(file.filename)
-    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], path, filename))
+    save_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], path)
+
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir,)
+    file.save(os.path.join(save_dir, filename))
     return filename
 
 
@@ -43,13 +56,14 @@ def upload(path='', allowed_extensions=[]):
 
         # if file exists and of the right file type, file will be uploaded
         if file and allowed_file(file.filename, allowed_extensions):
+            
             filename = save_file(path, file)
             flash('file {} uploaded successfully'.format(filename))
 
             # return redirect(url_for('filemanager.uploaded_file', filename=filename))
     if allowed_extensions:
         flashmsg = "Allowed extensions: " + ", ".join(allowed_extensions)
-        flash(flashmsg)
+        flash(flashmsg, 'error')
     return render_template('files/upload_file.html', allowed_extensions=allowed_extensions)
 
 

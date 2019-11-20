@@ -7,6 +7,7 @@ from . import filemanager
 from . import sort
 from . import analyze
 from . import account
+from . import db
 
 from carcollect.db import get_db
 

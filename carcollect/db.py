@@ -42,8 +42,6 @@ def init_db_command():
 def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
-    app.cli.add_command(get_random_db_entry)
-    app.cli.add_command(fill_db)
 
 
 @click.command('fill-db')
