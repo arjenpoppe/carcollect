@@ -13,6 +13,7 @@ from scipy.fftpack import fft, fftfreq
 import numpy as np
 
 from carcollect.filemanager import upload, uploads
+from carcollect.account import login_required
 
 bp = Blueprint('analyze', __name__, url_prefix='/analyze')
 
@@ -28,6 +29,7 @@ def audiofile_upload():
 
 # reroute to the file list
 @bp.route('/uploads', methods=('GET', 'POST'))
+@login_required
 def audiofile_uploads():
     return uploads(PATH)
 

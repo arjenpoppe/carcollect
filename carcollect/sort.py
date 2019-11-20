@@ -23,6 +23,13 @@ def get_data(table='result'):
     data = []
 
     # convert data to a simple dictionary
+    to_dict(data, db_data)
+
+    # return data in dictionary
+    return data
+
+
+def to_dict(data, db_data):
     for item in db_data:
         row = {
             'filename': item[0],
@@ -30,9 +37,6 @@ def get_data(table='result'):
             'probability': item[2]
         }
         data.append(row)
-
-    # return data in dictionary
-    return data
 
 
 # Sorting test called by url to test functionality (temp)

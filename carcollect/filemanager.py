@@ -5,6 +5,8 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
+from carcollect.account import login_required
+
 bp = Blueprint('filemanager', __name__, url_prefix='/files')
 
 
@@ -53,6 +55,7 @@ def upload(path='', allowed_extensions=[]):
 
 @bp.route('/')
 @bp.route('/<dir>')
+@login_required
 def uploads(dir=''):
     path = os.path.join(current_app.config['UPLOAD_FOLDER'], dir)
 
