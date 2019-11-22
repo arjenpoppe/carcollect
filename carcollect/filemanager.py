@@ -83,8 +83,8 @@ def uploads(dir=''):
 
 
 @bp.route('/<filename>')
-def uploaded_file(filename):
+def uploaded_file(filename, data=None):
     name = filename.split('.')[0]
     extension = filename.split('.')[1]
 
-    return render_template('files/uploaded_file.html', filename=name, extension=extension)
+    return render_template('files/uploaded_file.html', filename=name, extension=extension, data=data)

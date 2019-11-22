@@ -1,4 +1,5 @@
 import os
+import base64
 
 from pydub import AudioSegment
 
@@ -7,19 +8,20 @@ from flask import (
 )
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from io import BytesIO
 from scipy import arange
 from scipy.io import wavfile as wav
 from scipy.fftpack import fft, fftfreq
 import numpy as np
 
-from carcollect.filemanager import upload, uploads
+from carcollect.filemanager import upload, uploads, uploaded_file
 from carcollect.account import login_required
 
 bp = Blueprint('analyze', __name__, url_prefix='/analyze')
 
 ALLOWED_EXTENSIONS = ['mp3', 'wav']
 PATH = 'analyze'
-
 
 # reroute to the upload page
 @bp.route('/upload', methods=('GET', 'POST'))
@@ -59,24 +61,25 @@ def convert_mp3_to_wav(source):
 
     new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], PATH, new_filename)
 
-    breakpoint()
 
     return new_path
 
 
-# plot waveform graphs using fft and audio data
 def plot_graphs(fs_rate, signal, filename):
-    print("Frequency sampling", fs_rate)
+    
+    # TODO fix this
+
+    # print("Frequency sampling", fs_rate)
     l_audio = len(signal.shape)
-    print("Channels", l_audio)
+    # print("Channels", l_audio)
     if l_audio == 2:
         signal = signal.sum(axis=1) / 2
     N = signal.shape[0]
-    print("Complete Samplings N", N)
+    # print("Complete Samplings N", N)
     secs = N / float(fs_rate)
-    print("secs", secs)
+    # print("secs", secs)
     Ts = 1.0 / fs_rate  # sampling interval in time
-    print("Timestep between samples Ts", Ts)
+    # print("Timestep between samples Ts", Ts)
     t = arange(0, secs, Ts)  # time vector as scipy arange field / numpy.ndarray
 
     FFT = abs(fft(signal))
@@ -85,31 +88,40 @@ def plot_graphs(fs_rate, signal, filename):
     fft_freqs = np.array(freqs)
     freqs_side = freqs[range(N // 2)]  # one side frequency range
 
-    # breakpoint()
-
     t_divider = int(len(t)/1000)
     freq_divider = int(len(freqs_side)/1000)
 
-    # breakpoint()
+    # # plotting the signal
+    # plt.subplot(311)
+    # p1 = plt.plot(t[::t_divider], signal[::t_divider], "g")
+    # plt.xlabel('Time [in 100 miliseconds]')
+    # plt.ylabel('Amplitude')
 
-    # plotting the signal
-    plt.subplot(311)
-    p1 = plt.plot(t[::t_divider], signal[::t_divider], "g")
-    plt.xlabel('Time [in 100 miliseconds]')
-    plt.ylabel('Amplitude')
+    # # plotting the complete fft spectrum
+    # plt.subplot(312)
+    # p2 = plt.plot(freqs[::t_divider], FFT[::t_divider], "r")
+    # plt.xlabel('Frequency (Hz)')
+    # plt.ylabel('Count dbl-sided')
 
-    # plotting the complete fft spectrum
-    plt.subplot(312)
-    p2 = plt.plot(freqs[::t_divider], FFT[::t_divider], "r")
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Count dbl-sided')
+    # # plotting the positive fft spectrum
+    # plt.subplot(313)
+    # p3 = plt.plot(freqs_side[::freq_divider], abs(FFT_side)[::freq_divider], "b")
+    # plt.xlabel('Frequency (Hz)')
+    # plt.ylabel('Count single-sided')
 
-    # plotting the positive fft spectrum
-    plt.subplot(313)
-    p3 = plt.plot(freqs_side[::freq_divider], abs(FFT_side)[::freq_divider], "b")
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Count single-sided')
-    save_plot(plt, filename)
+    # Generate the figure **without using pyplot**.
+    fig = Figure()
+    ax = fig.subplots()
+    ax.plot([1, 2])
+    # Save it to a temporary buffer.
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    # Embed the result in the html output.
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+
+    return data
+
+    # save_plot(plt, filename)
 
 
 # save plot in predefined location
@@ -123,24 +135,27 @@ def plot_waveform():
     if request.method == "POST":
         filename = request.form["filename"]
         path = os.path.join(current_app.config['UPLOAD_FOLDER'], PATH, filename)
+        data = None
+        try:
+            # convert file if necessery
+            if needs_conversion(filename):
+                print('file_path: ' + path)
+                path = convert_mp3_to_wav(path)
+                filename = os.path.basename(path)
+            
+            # read audio file
+            try:       
+                fs_rate, signal = read_audiofile(path)
+            except ValueError:
+                flash('Cannot read file, make sure the file uses a .wav or .mp3 format')
 
-        # convert file if necessery
-        if needs_conversion(filename):
-            print('file_path: ' + path)
-            path = convert_mp3_to_wav(path)
-            filename = os.path.basename(path)
+            #plot and save graphs
+            data = plot_graphs(fs_rate, signal, filename)
+        except FileNotFoundError:
+            flash('Something went wrong while trying to find the correct file. Please contact blablabla.....', 'error')
         
-        # read audio file
-        try:       
-            fs_rate, signal = read_audiofile(path)
-        except ValueError:
-            flash('Cannot read file, make sure the file uses a .wav or .mp3 format')
 
-        #plot and save graphs
-        plot_graphs(fs_rate, signal, filename)
-        
-
-    return redirect(url_for('filemanager.uploaded_file', filename=filename))
+    return uploaded_file(filename, data)
 
 
 def needs_conversion(filename):

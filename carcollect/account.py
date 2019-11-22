@@ -26,17 +26,17 @@ def login():
         ).fetchone()
 
         if user is None or not check_password_hash(user['password'], password):
-            error = "The combination of email and password is incorrect. Please try again."
-            flash(error)
-            return redirect(url_for('account.login'))
+            error = 'The combination of email and password is incorrect. Please try again.'
+            
 
         if error is None:
             session.clear()
             session['user_id'] = user['id']
             session['email'] = user['email']
             return redirect(url_for('index'))
-    else:
-        return render_template('account/login.html')
+
+        flash(error)
+    return render_template('account/login.html')
 
 
 @bp.route('/create_account', methods=["POST", "GET"])
@@ -50,17 +50,18 @@ def create_account():
         db = get_db()
         error = None
 
-        if not email:
-            error = 'Email is required.'
-        elif not password:
-            error = 'Password is required.'
-        elif not firstname:
+        if not firstname:
             error = 'First Name is required.'
         elif not lastname:
             error = 'Last Name is required.'
+        elif not email:
+            error = 'Email is required.'
+        elif not password:
+            error = 'Password is required.'
+            
         elif get_user_by_email(email) is not None:
             error = f'Email {email} already exists in our database. It is not possible to recover your account. Good ' \
-                    f'luck remembering the password. '
+                    f'luck remembering the password.'
 
         if error is None:
             db.execute('INSERT INTO user (firstname, lastname, email, password) VALUES (?, ?, ?, ?)',
