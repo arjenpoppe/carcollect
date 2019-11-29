@@ -38,6 +38,11 @@ def runner(app):
     return app.test_cli_runner()
 
 
+@pytest.fixture
+def testaccount(client):
+    return AccountActions(client)
+
+
 class AccountActions(object):
     def __init__(self, client):
         self._client = client
@@ -52,6 +57,3 @@ class AccountActions(object):
         return self._client.get('/account/logout')
 
 
-@pytest.fixture
-def testaccount(client):
-    return AccountActions(client)

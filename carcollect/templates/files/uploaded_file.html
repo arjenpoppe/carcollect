@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}{{filename}}.{{extension}}{% endblock %}</h1>
+  <h1>{% block title %}{{filename}}{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
@@ -11,6 +11,6 @@
 	  	</div>
 	{% endif %}
   	<form action="{{url_for('analyze.plot_waveform')}}" method="post">
-  		<button value="{{filename}}.{{extension}}" name="filename" type="submit" class="btn btn-primary">Analyze</button>
+  		<button value="{{filename}}" name="filename" type="submit" class="btn btn-primary">Analyze</button>
   	</form>
 {% endblock %}

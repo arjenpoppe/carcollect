@@ -11,6 +11,11 @@ bp = Blueprint('account', __name__, url_prefix='/account')
 
 @bp.route('/login', methods=["POST", "GET"])
 def login():
+    """Return login view, also handles the actual authentication
+    
+    Returns:
+        template: Default login page
+    """
     if is_logged_in():
         flash("You are already logged in!")
         return redirect(url_for('account.user'))
@@ -20,15 +25,9 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
         db = get_db()
-        error = None
-        user = db.execute(
-            'SELECT * FROM user WHERE email = ?', (email,)
-        ).fetchone()
-
-        if user is None or not check_password_hash(user['password'], password):
-            error = 'The combination of email and password is incorrect. Please try again.'
-            
-
+        user = get_user_by_email(email)
+        
+        error = authenticate(user, password)  
         if error is None:
             session.clear()
             session['user_id'] = user['id']
@@ -39,8 +38,29 @@ def login():
     return render_template('account/login.html')
 
 
+def authenticate(user, password):
+    """Summary
+    
+    Args:
+        user (sqlite.object): user database object
+        password (str): password
+    
+    Returns:
+        str: Error message
+    """
+    error = None
+    if user is None or not check_password_hash(user['password'], password):
+        error = 'The combination of email and password is incorrect. Please try again.'
+        return error
+            
+
 @bp.route('/create_account', methods=["POST", "GET"])
 def create_account():
+    """Return default account creation view and does the actual registration
+    
+    Returns:
+        template: Description
+    """
     if request.method == "POST":
         firstname = request.form["firstname"]
         lastname = request.form["lastname"]
@@ -72,12 +92,16 @@ def create_account():
             return redirect(url_for('account.login'))
 
         flash(error)
-
     return render_template('account/create_account.html')
 
 
 @bp.route('/user', methods=["POST", "GET"])
 def user():
+    """Default user page
+    
+    Returns:
+        template: user page template
+    """
     if is_logged_in():
         user = get_user_by_id(session['user_id'])
 
@@ -111,6 +135,8 @@ def get_user_by_email(email):
 
 @bp.before_app_request
 def load_logged_in_user():
+    """Executed before every http request. Load the logged in user
+    """
     user_id = session.get('user_id')
 
     if user_id is None:
@@ -122,6 +148,11 @@ def load_logged_in_user():
 
 
 def login_required(view):
+    """Handles authentication for pages that require logging in
+    
+    Args:
+        view (Wrapper): Description
+    """
     @functools.wraps(view)
     def wrapped_view(*args, **kwargs):
         if g.user is None:
@@ -133,8 +164,10 @@ def login_required(view):
 
 
 def is_logged_in():
+    """Simple check to see of user is logged in
+    
+    Returns:
+        BOOLEAN: user logged in yes/no
+    """
     return "user_id" in session
 
-
-def redirect_url(default='index'):
-    return request.args.get('next') or request.referrer or url_for(default)

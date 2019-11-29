@@ -47,6 +47,11 @@ def init_app(app):
 @click.command('fill-db')
 @with_appcontext
 def fill_db(rows=500000):
+    """cli command to fill db with random data
+    
+    Args:
+        rows (int, optional): amount of rows
+    """
     init_db()
     db = get_db()
 

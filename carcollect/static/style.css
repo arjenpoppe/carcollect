@@ -15,3 +15,11 @@
   	background: #cae6f6;
   	border: 1px solid #377ba8;
 }
+
+.success {
+	margin: 1em 0;
+  	padding: 1em;
+  	background: #69ff8c;
+  	border: 1px solid #377ba8;
+}
+

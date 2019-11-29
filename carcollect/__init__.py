@@ -13,7 +13,15 @@ from carcollect.db import get_db
 
 
 def create_app(test_config=None):
-    '''Create the app, load the configuration, then return the app.'''
+    """App factory. Creates and configures the app, creates the default directories, registers cli commands
+    to app and registers blueprints to app
+    
+    Args:
+        test_config (None, optional): conftest will use this to override default config
+    
+    Returns:
+        Flask App: the actual app
+    """
     app = Flask(__name__, instance_relative_config=True)
     app.permanent_session_lifetime = timedelta(minutes=30)
     app.config.from_mapping(
@@ -53,7 +61,16 @@ def create_app(test_config=None):
 
     return app
 
+
 def register_blueprints(app):
+    """Register blueprints to app, then return it
+    
+    Args:
+        app (Flask app): app provided by app factory
+    
+    Returns:
+        Flask app: app with now registered blueprints
+    """
     app.register_blueprint(analyze.bp)
     app.register_blueprint(sort.bp)
     app.register_blueprint(filemanager.bp)
