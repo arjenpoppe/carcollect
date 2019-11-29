@@ -1,12 +1,16 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}{{filename}}.{{extension}}{% endblock %}</h1>
+  <h1>{% block title %}{{filename}}{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
-  	<img src="{{url_for('static', filename='plots/{}.png'.format(filename))}}"/>
+	{% if data %}	  	
+	  	<div class="text-center">
+	  		<img src='data:image/png;base64,{{data}}' class="img-fluid img-thumbnail rounded" />
+	  	</div>
+	{% endif %}
   	<form action="{{url_for('analyze.plot_waveform')}}" method="post">
-  		<button value="{{filename}}.{{extension}}" name="filename" type="submit" class="btn btn-primary">Analyze</button>
+  		<button value="{{filename}}" name="filename" type="submit" class="btn btn-primary">Analyze</button>
   	</form>
 {% endblock %}

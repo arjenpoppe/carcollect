@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS result;
 DROP TABLE IF EXISTS user;
+DROP TABLE IF EXISTS file;
 
 CREATE TABLE result (
   filename TEXT PRIMARY KEY,
@@ -13,4 +14,10 @@ CREATE TABLE user (
   lastname TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL
+);
+
+CREATE TABLE file (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	filename TEXT,
+	filepath TEXT
 );

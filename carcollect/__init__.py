@@ -7,12 +7,21 @@ from . import filemanager
 from . import sort
 from . import analyze
 from . import account
+from . import db
 
 from carcollect.db import get_db
 
 
 def create_app(test_config=None):
-    # create and configure the app
+    """App factory. Creates and configures the app, creates the default directories, registers cli commands
+    to app and registers blueprints to app
+    
+    Args:
+        test_config (None, optional): conftest will use this to override default config
+    
+    Returns:
+        Flask App: the actual app
+    """
     app = Flask(__name__, instance_relative_config=True)
     app.permanent_session_lifetime = timedelta(minutes=30)
     app.config.from_mapping(
@@ -29,25 +38,39 @@ def create_app(test_config=None):
         # load the test config if passed in
         app.config.from_mapping(test_config)
 
-    # ensure the instance folder exists
+    # create instance folder
     try:
         os.makedirs(app.instance_path)
     except OSError:
         pass
 
-    # temporary index page
+    # some test routes
     @app.route('/')
     def index():
         return render_template('index.html')
 
     @app.route('/hello')
     def hello():
-        return render_template('Hello, World!')
+        return 'Hello, World!'
 
     # register close_db and init_db_command with application
     db.init_app(app)
 
     # register blueprints
+    app = register_blueprints(app)
+
+    return app
+
+
+def register_blueprints(app):
+    """Register blueprints to app, then return it
+    
+    Args:
+        app (Flask app): app provided by app factory
+    
+    Returns:
+        Flask app: app with now registered blueprints
+    """
     app.register_blueprint(analyze.bp)
     app.register_blueprint(sort.bp)
     app.register_blueprint(filemanager.bp)

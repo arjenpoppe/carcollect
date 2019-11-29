@@ -1,12 +1,5 @@
-INSERT INTO result (filename, severity, probability)
+INSERT INTO user (firstname, lastname, email, password)
 VALUES
-       ('filename_345.wav', '3', '76'),
-       ('filename_765.wav', '9', '25'),
-       ('filename_741.wav', '4', '84'),
-       ('filename_843.wav', '9', '67'),
-       ('filename_983.wav', '6', '42'),
-       ('filename_246.wav', '8', '98'),
-       ('filename_834.wav', '4', '22'),
-       ('filename_953.wav', '6', '28'),
-       ('filename_371.wav', '9', '33'),
-       ('filename_537.wav', '1', '57')
+  ('Arjen', 'Poppe', 'arjen_poppe@live.nl', 'pbkdf2:sha256:150000$9kPvNYIK$86ecf0926c62280abd70b517cf9d5c19187069ea26f72522581e4624063e7f60'),
+  ('Firstname', 'Lastname', 'test@email.com', 'pbkdf2:sha256:150000$0yBAdqBG$9afc999a1131d5fb038641e17c17180e29ceb27eb890b1bda14f5d34134b3c0a');
+  
