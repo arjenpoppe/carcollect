@@ -6,6 +6,7 @@ carcollect/static/plots/*
 carcollect/static/uploads/*
 
 .vscode/
+.idea/
 
 .env
 
