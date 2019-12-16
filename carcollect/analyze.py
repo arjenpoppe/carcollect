@@ -67,26 +67,21 @@ def convert_mp3_to_wav(source):
     Returns:
         str: path to converted file
     """
-    test = source
     filename = os.path.basename(source)
-    print('source: ' + test)
 
     new_filename = f'{filename.split(".")[0]}.wav'
     saving_destination = os.path.abspath(os.path.join(current_app.config['UPLOAD_FOLDER'], PATH, new_filename))
 
-    # convert wav to mp3
     AudioSegment.from_mp3(source).export(saving_destination, format="wav")
     flash("File has been converted to the .wav format")
 
-    # delete old file
     os.remove(source)
-
     new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], PATH, new_filename)
 
     return new_path
 
 
-def plot_graphs(fs_rate, signal, filename):
+def get_plot_data(fs_rate, signal, filename):
     """Plot graphs with audio data.
 
     Args:
@@ -99,10 +94,11 @@ def plot_graphs(fs_rate, signal, filename):
     """
     audiofile = AudioFile(fs_rate, signal, filename)
     audiofile.analyze()
-    return create_multiplot(audiofile)
+    fig = plot_figure(audiofile)
+    return encode_to_base64(fig)
 
 
-def create_multiplot(audiofile):
+def encode_to_base64(figure):
     """Summary.
 
     Args:
@@ -110,45 +106,32 @@ def create_multiplot(audiofile):
 
     Returns:
         data: encoded base64 graph data
-    """
-    t_divider = int(len(audiofile.t)/1000)
-    # freq_divider = int(len(audiofile.freqs_side)/1000)
-
-    # TODO figure out what method to use
-
-    # # plotting the signal
-    # plt.subplot(311)
-    # p1 = plt.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider], "g")
-    # plt.xlabel('Time [in 100 miliseconds]')
-    # plt.ylabel('Amplitude')
-
-    # # plotting the complete fft spectrum
-    # plt.subplot(312)
-    # p2 = plt.plot(audiofile.freqs[::t_divider], audiofile.FFT[::t_divider], "r")
-    # plt.xlabel('Frequency (Hz)')
-    # plt.ylabel('Count dbl-sided')
-
-    # # plotting the positive fft spectrum
-    # plt.subplot(313)
-    # p3 = plt.plot(audiofile.freqs_side[::freq_divider], abs(audiofile.FFT_side)[::freq_divider], "b")
-    # plt.xlabel('Frequency (Hz)')
-    # plt.ylabel('Count single-sided')
-
-    # save_plot(plt, audiofile.filename)
-
-    # Generate the figure **without using pyplot**.
-    fig = Figure()
-    ax = fig.subplots()
-    ax.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider])
-    
+    """   
     # Save to a temporary buffer.
     buf = BytesIO()
-    fig.savefig(buf, format="png")
+    figure.savefig(buf, format="png")
     
     # Embed the result in the html output.
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
 
     return data
+
+
+def plot_figure(audiofile):
+    """Generate plot showing waveform
+    
+    Arguments:
+        audiofile {AudioFile} -- AudioFile object
+    
+    Returns:
+        Figure -- generated figure using audio data
+    """
+    t_divider = int(len(audiofile.t)/1000)
+    fig = Figure()
+    ax = fig.subplots()
+    ax.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider])
+
+    return fig
 
 
 def save_plot(plt, filename):
@@ -184,7 +167,7 @@ def plot_waveform():
             except ValueError:
                 flash('Cannot read file, make sure the file uses a .wav or .mp3 format')
 
-            data = plot_graphs(fs_rate, signal, filename)
+            data = get_plot_data(fs_rate, signal, filename)
 
         except FileNotFoundError:
             flash('Something went wrong while trying to find the correct file. Please contact blablabla.....', 'error')
@@ -234,3 +217,24 @@ class AudioFile():
         self.freqs_side = self.freqs[range(self.N // 2)]  # one side frequency range
 
 
+    # TODO figure out what method to use
+
+    # # plotting the signal
+    # plt.subplot(311)
+    # p1 = plt.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider], "g")
+    # plt.xlabel('Time [in 100 miliseconds]')
+    # plt.ylabel('Amplitude')
+
+    # # plotting the complete fft spectrum
+    # plt.subplot(312)
+    # p2 = plt.plot(audiofile.freqs[::t_divider], audiofile.FFT[::t_divider], "r")
+    # plt.xlabel('Frequency (Hz)')
+    # plt.ylabel('Count dbl-sided')
+
+    # # plotting the positive fft spectrum
+    # plt.subplot(313)
+    # p3 = plt.plot(audiofile.freqs_side[::freq_divider], abs(audiofile.FFT_side)[::freq_divider], "b")
+    # plt.xlabel('Frequency (Hz)')
+    # plt.ylabel('Count single-sided')
+
+    # save_plot(plt, audiofile.filename)
