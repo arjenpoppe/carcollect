@@ -5,9 +5,14 @@ idea/tasks.xml
 carcollect/static/plots/*
 carcollect/static/uploads/*
 
+.vscode/
+.idea/
+
 .env
 
 venv/
+virtual/
+virtualenv/
 
 *.pyc
 __pycache__/

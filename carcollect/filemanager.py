@@ -60,7 +60,7 @@ def upload(path='', allowed_extensions=[]):
 
         file = request.files['file']
 
-        if file.filename is '':
+        if file.filename == '':
             flash('No file found', 'error')
             return redirect(request.url)
         
