@@ -1,5 +1,6 @@
 import os
 import base64
+import datetime
 
 from flask import (
     Blueprint, flash, redirect, render_template, request, url_for, current_app, send_from_directory
@@ -8,10 +9,11 @@ from flask import (
 import matplotlib.pyplot as plt
 import numpy as np
 
+from numpy import arange
 from pydub import AudioSegment
 from matplotlib.figure import Figure
 from io import BytesIO
-from scipy import arange
+# from scipy import arange
 from scipy.io import wavfile as wav
 from scipy.fftpack import fft, fftfreq
 
@@ -54,6 +56,7 @@ def read_audiofile(path):
         array, array: fs_rate and signal
     """
     fs_rate, signal = wav.read(path)
+    print('audiofile read...')
 
     return fs_rate, signal
 
@@ -74,8 +77,10 @@ def convert_mp3_to_wav(source):
 
     AudioSegment.from_mp3(source).export(saving_destination, format="wav")
     flash("File has been converted to the .wav format")
+    print('file converted...')
 
     os.remove(source)
+    print('source removed...')
     new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], PATH, new_filename)
 
     return new_path
@@ -93,9 +98,13 @@ def get_plot_data(fs_rate, signal, filename):
         data: encoded base64 graph data
     """
     audiofile = AudioFile(fs_rate, signal, filename)
-    audiofile.analyze()
+    print('AudioFile object created...')
+    audiofile.analyze_all()
+
+
     fig = plot_figure(audiofile)
-    return encode_to_base64(fig)
+    data = encode_to_base64(fig)
+    return data
 
 
 def encode_to_base64(figure):
@@ -109,10 +118,13 @@ def encode_to_base64(figure):
     """   
     # Save to a temporary buffer.
     buf = BytesIO()
+    print('buffer initialized..')
     figure.savefig(buf, format="png")
+    print('figure saved to buffer..')
     
     # Embed the result in the html output.
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    print('figure encoded to base64..')
 
     return data
 
@@ -127,9 +139,12 @@ def plot_figure(audiofile):
         Figure -- generated figure using audio data
     """
     t_divider = int(len(audiofile.t)/1000)
+    print('divider calculated..')
     fig = Figure()
     ax = fig.subplots()
-    ax.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider])
+    print('empty figure created..')
+    ax.plot(audiofile.t[::t_divider], audiofile.data[::t_divider])
+    print('figure done!..')
 
     return fig
 
@@ -158,17 +173,13 @@ def plot_waveform():
         data = None
         try:
             if needs_conversion(filename):
-                print('file_path: ' + path)
                 path = convert_mp3_to_wav(path)
-                filename = os.path.basename(path)
-            
+                filename = os.path.basename(path)       
             try:       
                 fs_rate, signal = read_audiofile(path)
             except ValueError:
                 flash('Cannot read file, make sure the file uses a .wav or .mp3 format')
-
             data = get_plot_data(fs_rate, signal, filename)
-
         except FileNotFoundError:
             flash('Something went wrong while trying to find the correct file. Please contact blablabla.....', 'error')
         
@@ -190,31 +201,81 @@ def needs_conversion(filename):
 class AudioFile():
     """Simple class representing an audiofile. Houses all the needed variables
     """
-    def __init__(self, fs_rate, signal, filename):
-        self.fs_rate = fs_rate
-        self.signal = signal
+    def __init__(self, sample_rate, data, filename):
+        self.sample_rate = sample_rate
+        print('sample rate:', self.sample_rate)
+        self.data = data
+        print("signal length:", len(self.data))
+        print('signal example:', self.data)
         self.filename = filename
+        print('filename:', filename)
 
-    def analyze(self):
+    
+    def analyze_all(self):
         """Analyzes the audiofile data and saves it in local variables
         """
-        self.channels = len(self.signal.shape)
-        # print("Channels", channels)
-        if self.channels == 2:
-            self.signal = self.signal.sum(axis=1) / 2
-        self.N = self.signal.shape[0]
-        # print("Complete Samplings N", N)
-        self.secs = self.N / float(self.fs_rate)
-        # print("secs", secs)
-        self.Ts = 1.0 / self.fs_rate  # sampling interval in time
-        # print("Timestep between samples Ts", Ts)
-        self.t = arange(0, self.secs, self.Ts)  # time vector as scipy arange field / numpy.ndarray
+        self._analyze_channels()
+        self._analyze_samplings()
+        self._analyze_length()
+        self._analyze_sample_interval()
+        self._vector_to_arange()
+        self._apply_fft()       
+        print('analysis complete..')
 
-        self.FFT = abs(fft(self.signal))
-        self.FFT_side = self.FFT[range(self.N // 2)]  # one side FFT range
-        self.freqs = fftfreq(self.signal.size, self.t[1] - self.t[0])
+
+    def _analyze_channels(self):
+        """analyzes the amount of audio channels existing in the file
+        """
+        self.channels = len(self.data.shape)
+        print("data shape:", self.data.shape)
+        print("file has", self.channels, "audio channels")
+        if self.channels == 2:
+            self.data = self.data.sum(axis=1) / 2
+            print('example 2 channel data:', self.data)
+
+
+    def _analyze_samplings(self):
+        """analyzes the total amount of samples
+        """
+        self.N = self.data.shape[0]
+        print("total samplings N:", self.N)
+
+
+    def _analyze_length(self):
+        """analyzes the total length of the file
+        """
+        self.secs = self.N / float(self.sample_rate)
+        print("sound length:", str(datetime.timedelta(seconds=int(self.secs))))
+
+
+    def _analyze_sample_interval(self):
+        """analyzes the time between samples
+        """
+        self.sample_time = 1.0 / self.sample_rate 
+        print("sample time:", self.sample_time)
+
+    
+    def _vector_to_arange(self):
+        """creates the time vector with a scipy arange field
+        """
+        self.t = arange(0, self.secs, self.sample_time) 
+        print(f'time vector: start = 0, end = {self.secs}, steps = {self.sample_time}')
+
+    
+    def _apply_fft(self):
+        """does all the necessery fft calculations
+        """
+        print('data to be transformed:', self.data, 'length of data:', len(self.data))
+        self.FFT = abs(fft(self.data))
+        print('calculated waveform from signal', self.FFT, "length:", len(self.FFT))
+        self.FFT_side = self.FFT[range(self.N // 2)]  
+        print('calculated one side of waveform')
+        self.freqs = fftfreq(self.data.size, self.t[1] - self.t[0])
+        print('calculated frequencies')
         self.fft_freqs = np.array(self.freqs)
-        self.freqs_side = self.freqs[range(self.N // 2)]  # one side frequency range
+        print('frequencies to np.array')
+        self.freqs_side = self.freqs[range(self.N // 2)] 
+        print('calculated one side of frequency range')
 
 
     # TODO figure out what method to use

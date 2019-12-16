@@ -42,6 +42,7 @@ def save_file(path, file):
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir,)
     file.save(os.path.join(save_dir, filename))
+    print('file saved to filesystem...')
     return filename
 
 
