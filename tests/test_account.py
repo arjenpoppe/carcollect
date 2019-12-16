@@ -4,12 +4,6 @@ from carcollect.db import get_db
 
 
 def test_register(client, app):
-    """Summary
-	
-	Args:
-	    client (TYPE): Description
-	    app (TYPE): Description
-	"""
     assert client.get('/account/create_account').status_code == 200
     response = client.post(
         '/account/create_account', data={'firstname': 'a', 'lastname': 'p', 'email': 'a@p.com', 'password': 'test'}
@@ -27,8 +21,7 @@ def test_register(client, app):
         ('a', '', '', '', b'Last Name is required'),
         ('a', 'p', '', '', b'Email is required'),
         ('a', 'p', 'a@p.com', '', b'Password is required'),
-        ('test', 'account', 'test@email.com', 'test', b'Email test@email.com already exists in our database. ' \
-                                                      b'It is not possible to recover your account. Good luck remembering the password.')
+        ('test', 'account', 'test@email.com', 'test', b'Email test@email.com already exists in our database.')
 ))
 def test_registration_input(client, firstname, lastname, email, password, message):
     response = client.post(

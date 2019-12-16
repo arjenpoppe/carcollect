@@ -32,25 +32,44 @@ def login():
     Returns:
         template: Default login page
     """
-    if is_logged_in():
-        flash("You are already logged in!")
-        return redirect(url_for('account.user'))
+    is_logged_in()
 
     if request.method == "POST":
         session.permanent = True
-        email = request.form["email"]
-        password = request.form["password"]
-        user = get_user_by_email(email)
         
+        user, password = handle_login_form_data()
         error = authenticate(user, password)  
+        
         if error is None:
-            session.clear()
-            session['user_id'] = user['id']
-            session['email'] = user['email']
+            add_user_to_session(user)
             return redirect(url_for('index'))
 
         flash(error)
     return render_template('account/login.html')
+
+
+def add_user_to_session(user):
+    """add user to session data, gets called by main login function
+    
+    Arguments:
+        user {sqlite.object} -- user object from database
+    """
+    session.clear()
+    session['user_id'] = user['id']
+    session['email'] = user['email']
+
+
+def handle_login_form_data():
+    """Handles login post data, gets called by main login function
+    
+    Returns:
+        sqlite.object, str -- user and password
+    """
+    email = request.form["email"]
+    password = request.form["password"]
+    user = get_user_by_email(email)
+
+    return user, password
 
 
 def authenticate(user, password):
@@ -74,39 +93,62 @@ def create_account():
     """Return default account creation view and does the actual registration
     
     Returns:
-        template: Description
+        template: login page if successful
+        template: create_account page if error
     """
     if request.method == "POST":
-        firstname = request.form["firstname"]
-        lastname = request.form["lastname"]
-        email = request.form["email"]
-        password = request.form["password"]
-
-        db = get_db()
-        error = None
-
-        if not firstname:
-            error = 'First Name is required.'
-        elif not lastname:
-            error = 'Last Name is required.'
-        elif not email:
-            error = 'Email is required.'
-        elif not password:
-            error = 'Password is required.'
-            
-        elif get_user_by_email(email) is not None:
-            error = f'Email {email} already exists in our database.'
+        firstname, lastname, email, password, error = handle_create_account_form_data()
 
         if error is None:
-            db.execute('INSERT INTO user (firstname, lastname, email, password) VALUES (?, ?, ?, ?)',
-                       (firstname, lastname, email, generate_password_hash(password)))
-            db.commit()
-
-            flash('Account created successfully.')
+            add_user_to_db(firstname, lastname, email, password)
             return redirect(url_for('account.login'))
 
         flash(error)
     return render_template('account/create_account.html')
+
+
+def add_user_to_db(firstname, lastname, email, password):
+    """add user data to database
+    
+    Arguments:
+        firstname {str} -- First Name of user
+        lastname {str} -- Last Name of user
+        email {str} -- Email adress of user
+        password {str} -- Unhashed password of user
+    """
+    db = get_db()
+    db.execute('INSERT INTO user (firstname, lastname, email, password) VALUES (?, ?, ?, ?)',
+                (firstname, lastname, email, generate_password_hash(password)))
+    db.commit()
+    flash('Account created successfully.')
+
+
+
+def handle_create_account_form_data():
+    """Handles form data for login
+    
+    Returns:
+        str -- error message
+    """
+    firstname = request.form["firstname"]
+    lastname = request.form["lastname"]
+    email = request.form["email"]
+    password = request.form["password"]
+
+    error = None
+
+    if not firstname:
+        error = 'First Name is required.'
+    elif not lastname:
+        error = 'Last Name is required.'
+    elif not email:
+        error = 'Email is required.'
+    elif not password:
+        error = 'Password is required.'          
+    elif get_user_by_email(email) is not None:
+        error = f'Email {email} already exists in our database.'
+    
+    return firstname, lastname, email, password, error
 
 
 @bp.route('/user')
@@ -180,10 +222,12 @@ def load_logged_in_user():
 
 
 def is_logged_in():
-    """Simple check to see of user is logged in
+    """Redirects user to user page if already logged in
     
     Returns:
-        BOOLEAN: user logged in yes/no
+        redirect: user page
     """
-    return "user_id" in session
+    if "user_id" in session:
+        flash("You are already logged in!")
+        return redirect(url_for('account.user'))
 

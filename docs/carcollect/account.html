@@ -58,25 +58,44 @@ def login():
     Returns:
         template: Default login page
     &#34;&#34;&#34;
-    if is_logged_in():
-        flash(&#34;You are already logged in!&#34;)
-        return redirect(url_for(&#39;account.user&#39;))
+    is_logged_in()
 
     if request.method == &#34;POST&#34;:
         session.permanent = True
-        email = request.form[&#34;email&#34;]
-        password = request.form[&#34;password&#34;]
-        user = get_user_by_email(email)
         
+        user, password = handle_login_form_data()
         error = authenticate(user, password)  
+        
         if error is None:
-            session.clear()
-            session[&#39;user_id&#39;] = user[&#39;id&#39;]
-            session[&#39;email&#39;] = user[&#39;email&#39;]
+            add_user_to_session(user)
             return redirect(url_for(&#39;index&#39;))
 
         flash(error)
     return render_template(&#39;account/login.html&#39;)
+
+
+def add_user_to_session(user):
+    &#34;&#34;&#34;add user to session data, gets called by main login function
+    
+    Arguments:
+        user {sqlite.object} -- user object from database
+    &#34;&#34;&#34;
+    session.clear()
+    session[&#39;user_id&#39;] = user[&#39;id&#39;]
+    session[&#39;email&#39;] = user[&#39;email&#39;]
+
+
+def handle_login_form_data():
+    &#34;&#34;&#34;Handles login post data, gets called by main login function
+    
+    Returns:
+        sqlite.object, str -- user and password
+    &#34;&#34;&#34;
+    email = request.form[&#34;email&#34;]
+    password = request.form[&#34;password&#34;]
+    user = get_user_by_email(email)
+
+    return user, password
 
 
 def authenticate(user, password):
@@ -100,39 +119,62 @@ def create_account():
     &#34;&#34;&#34;Return default account creation view and does the actual registration
     
     Returns:
-        template: Description
+        template: login page if successful
+        template: create_account page if error
     &#34;&#34;&#34;
     if request.method == &#34;POST&#34;:
-        firstname = request.form[&#34;firstname&#34;]
-        lastname = request.form[&#34;lastname&#34;]
-        email = request.form[&#34;email&#34;]
-        password = request.form[&#34;password&#34;]
-
-        db = get_db()
-        error = None
-
-        if not firstname:
-            error = &#39;First Name is required.&#39;
-        elif not lastname:
-            error = &#39;Last Name is required.&#39;
-        elif not email:
-            error = &#39;Email is required.&#39;
-        elif not password:
-            error = &#39;Password is required.&#39;
-            
-        elif get_user_by_email(email) is not None:
-            error = f&#39;Email {email} already exists in our database.&#39;
+        firstname, lastname, email, password, error = handle_create_account_form_data()
 
         if error is None:
-            db.execute(&#39;INSERT INTO user (firstname, lastname, email, password) VALUES (?, ?, ?, ?)&#39;,
-                       (firstname, lastname, email, generate_password_hash(password)))
-            db.commit()
-
-            flash(&#39;Account created successfully.&#39;)
+            add_user_to_db(firstname, lastname, email, password)
             return redirect(url_for(&#39;account.login&#39;))
 
         flash(error)
     return render_template(&#39;account/create_account.html&#39;)
+
+
+def add_user_to_db(firstname, lastname, email, password):
+    &#34;&#34;&#34;add user data to database
+    
+    Arguments:
+        firstname {str} -- First Name of user
+        lastname {str} -- Last Name of user
+        email {str} -- Email adress of user
+        password {str} -- Unhashed password of user
+    &#34;&#34;&#34;
+    db = get_db()
+    db.execute(&#39;INSERT INTO user (firstname, lastname, email, password) VALUES (?, ?, ?, ?)&#39;,
+                (firstname, lastname, email, generate_password_hash(password)))
+    db.commit()
+    flash(&#39;Account created successfully.&#39;)
+
+
+
+def handle_create_account_form_data():
+    &#34;&#34;&#34;Handles form data for login
+    
+    Returns:
+        str -- error message
+    &#34;&#34;&#34;
+    firstname = request.form[&#34;firstname&#34;]
+    lastname = request.form[&#34;lastname&#34;]
+    email = request.form[&#34;email&#34;]
+    password = request.form[&#34;password&#34;]
+
+    error = None
+
+    if not firstname:
+        error = &#39;First Name is required.&#39;
+    elif not lastname:
+        error = &#39;Last Name is required.&#39;
+    elif not email:
+        error = &#39;Email is required.&#39;
+    elif not password:
+        error = &#39;Password is required.&#39;          
+    elif get_user_by_email(email) is not None:
+        error = f&#39;Email {email} already exists in our database.&#39;
+    
+    return firstname, lastname, email, password, error
 
 
 @bp.route(&#39;/user&#39;)
@@ -206,12 +248,14 @@ def load_logged_in_user():
 
 
 def is_logged_in():
-    &#34;&#34;&#34;Simple check to see of user is logged in
+    &#34;&#34;&#34;Redirects user to user page if already logged in
     
     Returns:
-        BOOLEAN: user logged in yes/no
+        redirect: user page
     &#34;&#34;&#34;
-    return &#34;user_id&#34; in session</code></pre>
+    if &#34;user_id&#34; in session:
+        flash(&#34;You are already logged in!&#34;)
+        return redirect(url_for(&#39;account.user&#39;))</code></pre>
 </details>
 </section>
 <section>
@@ -221,6 +265,58 @@ def is_logged_in():
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="carcollect.account.add_user_to_db"><code class="name flex">
+<span>def <span class="ident">add_user_to_db</span></span>(<span>firstname, lastname, email, password)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>add user data to database</p>
+<h2 id="arguments">Arguments</h2>
+<p>firstname {str} &ndash; First Name of user
+lastname {str} &ndash; Last Name of user
+email {str} &ndash; Email adress of user
+password {str} &ndash; Unhashed password of user</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_user_to_db(firstname, lastname, email, password):
+    &#34;&#34;&#34;add user data to database
+    
+    Arguments:
+        firstname {str} -- First Name of user
+        lastname {str} -- Last Name of user
+        email {str} -- Email adress of user
+        password {str} -- Unhashed password of user
+    &#34;&#34;&#34;
+    db = get_db()
+    db.execute(&#39;INSERT INTO user (firstname, lastname, email, password) VALUES (?, ?, ?, ?)&#39;,
+                (firstname, lastname, email, generate_password_hash(password)))
+    db.commit()
+    flash(&#39;Account created successfully.&#39;)</code></pre>
+</details>
+</dd>
+<dt id="carcollect.account.add_user_to_session"><code class="name flex">
+<span>def <span class="ident">add_user_to_session</span></span>(<span>user)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>add user to session data, gets called by main login function</p>
+<h2 id="arguments">Arguments</h2>
+<p>user {sqlite.object} &ndash; user object from database</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_user_to_session(user):
+    &#34;&#34;&#34;add user to session data, gets called by main login function
+    
+    Arguments:
+        user {sqlite.object} -- user object from database
+    &#34;&#34;&#34;
+    session.clear()
+    session[&#39;user_id&#39;] = user[&#39;id&#39;]
+    session[&#39;email&#39;] = user[&#39;email&#39;]</code></pre>
+</details>
+</dd>
 <dt id="carcollect.account.authenticate"><code class="name flex">
 <span>def <span class="ident">authenticate</span></span>(<span>user, password)</span>
 </code></dt>
@@ -266,7 +362,9 @@ def is_logged_in():
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><strong><code>template</code></strong></dt>
-<dd>Description</dd>
+<dd>login page if successful</dd>
+<dt><strong><code>template</code></strong></dt>
+<dd>create_account page if error</dd>
 </dl></section>
 <details class="source">
 <summary>
@@ -277,35 +375,14 @@ def create_account():
     &#34;&#34;&#34;Return default account creation view and does the actual registration
     
     Returns:
-        template: Description
+        template: login page if successful
+        template: create_account page if error
     &#34;&#34;&#34;
     if request.method == &#34;POST&#34;:
-        firstname = request.form[&#34;firstname&#34;]
-        lastname = request.form[&#34;lastname&#34;]
-        email = request.form[&#34;email&#34;]
-        password = request.form[&#34;password&#34;]
-
-        db = get_db()
-        error = None
-
-        if not firstname:
-            error = &#39;First Name is required.&#39;
-        elif not lastname:
-            error = &#39;Last Name is required.&#39;
-        elif not email:
-            error = &#39;Email is required.&#39;
-        elif not password:
-            error = &#39;Password is required.&#39;
-            
-        elif get_user_by_email(email) is not None:
-            error = f&#39;Email {email} already exists in our database.&#39;
+        firstname, lastname, email, password, error = handle_create_account_form_data()
 
         if error is None:
-            db.execute(&#39;INSERT INTO user (firstname, lastname, email, password) VALUES (?, ?, ?, ?)&#39;,
-                       (firstname, lastname, email, generate_password_hash(password)))
-            db.commit()
-
-            flash(&#39;Account created successfully.&#39;)
+            add_user_to_db(firstname, lastname, email, password)
             return redirect(url_for(&#39;account.login&#39;))
 
         flash(error)
@@ -372,27 +449,97 @@ def create_account():
     return user</code></pre>
 </details>
 </dd>
+<dt id="carcollect.account.handle_create_account_form_data"><code class="name flex">
+<span>def <span class="ident">handle_create_account_form_data</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Handles form data for login</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code> &ndash; <code>error</code> <code>message</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def handle_create_account_form_data():
+    &#34;&#34;&#34;Handles form data for login
+    
+    Returns:
+        str -- error message
+    &#34;&#34;&#34;
+    firstname = request.form[&#34;firstname&#34;]
+    lastname = request.form[&#34;lastname&#34;]
+    email = request.form[&#34;email&#34;]
+    password = request.form[&#34;password&#34;]
+
+    error = None
+
+    if not firstname:
+        error = &#39;First Name is required.&#39;
+    elif not lastname:
+        error = &#39;Last Name is required.&#39;
+    elif not email:
+        error = &#39;Email is required.&#39;
+    elif not password:
+        error = &#39;Password is required.&#39;          
+    elif get_user_by_email(email) is not None:
+        error = f&#39;Email {email} already exists in our database.&#39;
+    
+    return firstname, lastname, email, password, error</code></pre>
+</details>
+</dd>
+<dt id="carcollect.account.handle_login_form_data"><code class="name flex">
+<span>def <span class="ident">handle_login_form_data</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Handles login post data, gets called by main login function</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>sqlite.object</code>, <code>str</code> &ndash; <a title="carcollect.account.user" href="#carcollect.account.user"><code>user()</code></a> <code>and</code> <code>password</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def handle_login_form_data():
+    &#34;&#34;&#34;Handles login post data, gets called by main login function
+    
+    Returns:
+        sqlite.object, str -- user and password
+    &#34;&#34;&#34;
+    email = request.form[&#34;email&#34;]
+    password = request.form[&#34;password&#34;]
+    user = get_user_by_email(email)
+
+    return user, password</code></pre>
+</details>
+</dd>
 <dt id="carcollect.account.is_logged_in"><code class="name flex">
 <span>def <span class="ident">is_logged_in</span></span>(<span>)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Simple check to see of user is logged in</p>
+<section class="desc"><p>Redirects user to user page if already logged in</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><strong><code>BOOLEAN</code></strong></dt>
-<dd>user logged in yes/no</dd>
+<dt><strong><code>redirect</code></strong></dt>
+<dd>user page</dd>
 </dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def is_logged_in():
-    &#34;&#34;&#34;Simple check to see of user is logged in
+    &#34;&#34;&#34;Redirects user to user page if already logged in
     
     Returns:
-        BOOLEAN: user logged in yes/no
+        redirect: user page
     &#34;&#34;&#34;
-    return &#34;user_id&#34; in session</code></pre>
+    if &#34;user_id&#34; in session:
+        flash(&#34;You are already logged in!&#34;)
+        return redirect(url_for(&#39;account.user&#39;))</code></pre>
 </details>
 </dd>
 <dt id="carcollect.account.load_logged_in_user"><code class="name flex">
@@ -439,21 +586,16 @@ def login():
     Returns:
         template: Default login page
     &#34;&#34;&#34;
-    if is_logged_in():
-        flash(&#34;You are already logged in!&#34;)
-        return redirect(url_for(&#39;account.user&#39;))
+    is_logged_in()
 
     if request.method == &#34;POST&#34;:
         session.permanent = True
-        email = request.form[&#34;email&#34;]
-        password = request.form[&#34;password&#34;]
-        user = get_user_by_email(email)
         
+        user, password = handle_login_form_data()
         error = authenticate(user, password)  
+        
         if error is None:
-            session.clear()
-            session[&#39;user_id&#39;] = user[&#39;id&#39;]
-            session[&#39;email&#39;] = user[&#39;email&#39;]
+            add_user_to_session(user)
             return redirect(url_for(&#39;index&#39;))
 
         flash(error)
@@ -563,11 +705,15 @@ def user():
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="two-column">
+<ul class="">
+<li><code><a title="carcollect.account.add_user_to_db" href="#carcollect.account.add_user_to_db">add_user_to_db</a></code></li>
+<li><code><a title="carcollect.account.add_user_to_session" href="#carcollect.account.add_user_to_session">add_user_to_session</a></code></li>
 <li><code><a title="carcollect.account.authenticate" href="#carcollect.account.authenticate">authenticate</a></code></li>
 <li><code><a title="carcollect.account.create_account" href="#carcollect.account.create_account">create_account</a></code></li>
 <li><code><a title="carcollect.account.get_user_by_email" href="#carcollect.account.get_user_by_email">get_user_by_email</a></code></li>
 <li><code><a title="carcollect.account.get_user_by_id" href="#carcollect.account.get_user_by_id">get_user_by_id</a></code></li>
+<li><code><a title="carcollect.account.handle_create_account_form_data" href="#carcollect.account.handle_create_account_form_data">handle_create_account_form_data</a></code></li>
+<li><code><a title="carcollect.account.handle_login_form_data" href="#carcollect.account.handle_login_form_data">handle_login_form_data</a></code></li>
 <li><code><a title="carcollect.account.is_logged_in" href="#carcollect.account.is_logged_in">is_logged_in</a></code></li>
 <li><code><a title="carcollect.account.load_logged_in_user" href="#carcollect.account.load_logged_in_user">load_logged_in_user</a></code></li>
 <li><code><a title="carcollect.account.login" href="#carcollect.account.login">login</a></code></li>

@@ -1,9 +1,14 @@
-def test_page_renders(client):
-	response = client.get('/analyze/upload')
-	assert response.status_code == 200
+import pytest
 
-	response = client.get('/analyze/uploads')
-	assert response.status_code == 200
+@pytest.mark.parametrize(('url', 'statuscode', 'login'),(
+	('/analyze/upload', 200, False),
+	('/analyze/uploads', 200, True),
+	('/analyze/uploads', 302, False)
+))
+def test_page_renders(client, testaccount, url, statuscode, login):
+	if login: testaccount.login()
+	response = client.get(url)
+	assert response.status_code == statuscode
 
 
 def test_analyze_file(client):
