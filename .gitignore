@@ -10,6 +10,7 @@ carcollect/static/uploads/*
 
 .env
 
+venv/
 virtual/
 virtualenv/
 
