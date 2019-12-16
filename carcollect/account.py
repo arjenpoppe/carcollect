@@ -10,8 +10,8 @@ bp = Blueprint('account', __name__, url_prefix='/account')
 
 
 def login_required(view):
-    """Handles authentication for pages that require logging in.
-
+    """Handles authentication for pages that require logging in
+    
     Args:
         view (Wrapper): Description
     """
@@ -27,8 +27,8 @@ def login_required(view):
 
 @bp.route('/login', methods=["POST", "GET"])
 def login():
-    """Return login view, also handles the actual authentication.
-
+    """Return login view, also handles the actual authentication
+    
     Returns:
         template: Default login page
     """
@@ -54,12 +54,12 @@ def login():
 
 
 def authenticate(user, password):
-    """Summary.
-
+    """Authenticate user
+    
     Args:
         user (sqlite.object): user database object
         password (str): password
-
+    
     Returns:
         str: Error message
     """
@@ -71,8 +71,8 @@ def authenticate(user, password):
 
 @bp.route('/create_account', methods=["POST", "GET"])
 def create_account():
-    """Return default account creation view and does the actual registration.
-
+    """Return default account creation view and does the actual registration
+    
     Returns:
         template: Description
     """
@@ -112,8 +112,8 @@ def create_account():
 @bp.route('/user')
 @login_required
 def user():
-    """Default user page.
-
+    """Default user page
+    
     Returns:
         template: user page template
     """
@@ -123,6 +123,11 @@ def user():
 
 @bp.route('/logout')
 def logout():
+    """Clears session data
+    
+    Returns:
+        redirect -- Login page
+    """
     if is_logged_in():
         session.clear()
         flash("You are now logged out!")
@@ -133,12 +138,28 @@ def logout():
 
 
 def get_user_by_id(user_id):
+    """returns a user from the database
+    
+    Arguments:
+        user_id {integer} -- the user id
+    
+    Returns:
+        sqlite.object -- the requested user
+    """
     db = get_db()
     user = db.execute('SELECT * FROM user WHERE id = ?', (user_id,)).fetchone()
     return user
 
 
 def get_user_by_email(email):
+    """returns a user from the database
+    
+    Arguments:
+        email {str} -- email adress of user
+    
+    Returns:
+        sqlite.object -- the requested user
+    """
     db = get_db()
     user = db.execute('SELECT * FROM user WHERE email = ?', (email,)).fetchone()
     return user
@@ -146,9 +167,7 @@ def get_user_by_email(email):
 
 @bp.before_app_request
 def load_logged_in_user():
-    """Executed before every http request.
-
-    Load the logged in user
+    """Executed before every http request. Load the logged in user
     """
     user_id = session.get('user_id')
 
@@ -161,8 +180,8 @@ def load_logged_in_user():
 
 
 def is_logged_in():
-    """Simple check to see of user is logged in.
-
+    """Simple check to see of user is logged in
+    
     Returns:
         BOOLEAN: user logged in yes/no
     """

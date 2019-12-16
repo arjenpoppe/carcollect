@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.7.2" />
+<title>carcollect.analyze API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>carcollect.analyze</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import os
+import base64
+
+from flask import (
+    Blueprint, flash, redirect, render_template, request, url_for, current_app, send_from_directory
+)
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from pydub import AudioSegment
+from matplotlib.figure import Figure
+from io import BytesIO
+from scipy import arange
+from scipy.io import wavfile as wav
+from scipy.fftpack import fft, fftfreq
+
+from carcollect.filemanager import upload, uploads, uploaded_file
+from carcollect.account import login_required
+
+bp = Blueprint(&#39;analyze&#39;, __name__, url_prefix=&#39;/analyze&#39;)
+
+ALLOWED_EXTENSIONS = [&#39;mp3&#39;, &#39;wav&#39;]
+PATH = &#39;analyze&#39;
+
+@bp.route(&#39;/upload&#39;, methods=(&#39;GET&#39;, &#39;POST&#39;))
+def audiofile_upload():
+    &#34;&#34;&#34;Redirects user to upload page
+    
+    Returns:
+        template -- upload page
+    &#34;&#34;&#34;
+    return upload(PATH, ALLOWED_EXTENSIONS)
+
+
+@bp.route(&#39;/uploads&#39;, methods=(&#39;GET&#39;, &#39;POST&#39;))
+@login_required
+def audiofile_uploads():
+    &#34;&#34;&#34;Redirects user to uploads while passing some params
+    
+    Returns:
+        template -- uploads page
+    &#34;&#34;&#34;
+    return uploads(PATH)
+
+
+def read_audiofile(path):
+    &#34;&#34;&#34;read .wav files and return data.
+
+    Args:
+        path (str): Path to file including filename
+
+    Returns:
+        array, array: fs_rate and signal
+    &#34;&#34;&#34;
+    fs_rate, signal = wav.read(path)
+
+    return fs_rate, signal
+
+
+def convert_mp3_to_wav(source):
+    &#34;&#34;&#34;convert mp3 files to wav format.
+
+    Args:
+        source (str): path to mp3 file
+
+    Returns:
+        str: path to converted file
+    &#34;&#34;&#34;
+    test = source
+    filename = os.path.basename(source)
+    print(&#39;source: &#39; + test)
+
+    new_filename = f&#39;{filename.split(&#34;.&#34;)[0]}.wav&#39;
+    saving_destination = os.path.abspath(os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, new_filename))
+
+    # convert wav to mp3
+    AudioSegment.from_mp3(source).export(saving_destination, format=&#34;wav&#34;)
+    flash(&#34;File has been converted to the .wav format&#34;)
+
+    # delete old file
+    os.remove(source)
+
+    new_path = os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, new_filename)
+
+    return new_path
+
+
+def plot_graphs(fs_rate, signal, filename):
+    &#34;&#34;&#34;Plot graphs with audio data.
+
+    Args:
+        fs_rate (array): fs_rate
+        signal (array): signal values
+        filename (str): filename
+
+    Returns:
+        data: encoded base64 graph data
+    &#34;&#34;&#34;
+    audiofile = AudioFile(fs_rate, signal, filename)
+    audiofile.analyze()
+    return create_multiplot(audiofile)
+
+
+def create_multiplot(audiofile):
+    &#34;&#34;&#34;Summary.
+
+    Args:
+        audiofile (AudioFile): AudioFile object
+
+    Returns:
+        data: encoded base64 graph data
+    &#34;&#34;&#34;
+    t_divider = int(len(audiofile.t)/1000)
+    # freq_divider = int(len(audiofile.freqs_side)/1000)
+
+    # TODO figure out what method to use
+
+    # # plotting the signal
+    # plt.subplot(311)
+    # p1 = plt.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider], &#34;g&#34;)
+    # plt.xlabel(&#39;Time [in 100 miliseconds]&#39;)
+    # plt.ylabel(&#39;Amplitude&#39;)
+
+    # # plotting the complete fft spectrum
+    # plt.subplot(312)
+    # p2 = plt.plot(audiofile.freqs[::t_divider], audiofile.FFT[::t_divider], &#34;r&#34;)
+    # plt.xlabel(&#39;Frequency (Hz)&#39;)
+    # plt.ylabel(&#39;Count dbl-sided&#39;)
+
+    # # plotting the positive fft spectrum
+    # plt.subplot(313)
+    # p3 = plt.plot(audiofile.freqs_side[::freq_divider], abs(audiofile.FFT_side)[::freq_divider], &#34;b&#34;)
+    # plt.xlabel(&#39;Frequency (Hz)&#39;)
+    # plt.ylabel(&#39;Count single-sided&#39;)
+
+    # save_plot(plt, audiofile.filename)
+
+    # Generate the figure **without using pyplot**.
+    fig = Figure()
+    ax = fig.subplots()
+    ax.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider])
+    
+    # Save to a temporary buffer.
+    buf = BytesIO()
+    fig.savefig(buf, format=&#34;png&#34;)
+    
+    # Embed the result in the html output.
+    data = base64.b64encode(buf.getbuffer()).decode(&#34;ascii&#34;)
+
+    return data
+
+
+def save_plot(plt, filename):
+    &#34;&#34;&#34;Save a pyplot object as png
+    
+    Arguments:
+        plt {pyplot.plot} -- the plot that needs saving
+        filename {str} -- filename without extension
+    &#34;&#34;&#34;
+    plt.savefig(&#39;{}/{}.png&#39;.format(current_app.config[&#39;PLOT_FOLDER&#39;], filename.split(&#39;.&#39;)[0]))
+
+
+@bp.route(&#39;/plot&#39;, methods=(&#39;GET&#39;, &#39;POST&#39;))
+def plot_waveform():
+    &#34;&#34;&#34;Main method that initiates the analyzation of an audiofile. Also calls
+    all nesseccery functions.
+
+    Returns:
+        Redirect object: redirect to &#39;uploaded_file&#39; page
+    &#34;&#34;&#34;
+    if request.method == &#34;POST&#34;:
+        filename = request.form[&#34;filename&#34;]
+        path = os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, filename)
+        data = None
+        try:
+            if needs_conversion(filename):
+                print(&#39;file_path: &#39; + path)
+                path = convert_mp3_to_wav(path)
+                filename = os.path.basename(path)
+            
+            try:       
+                fs_rate, signal = read_audiofile(path)
+            except ValueError:
+                flash(&#39;Cannot read file, make sure the file uses a .wav or .mp3 format&#39;)
+
+            data = plot_graphs(fs_rate, signal, filename)
+
+        except FileNotFoundError:
+            flash(&#39;Something went wrong while trying to find the correct file. Please contact blablabla.....&#39;, &#39;error&#39;)
+        
+    return uploaded_file(filename, data)
+
+
+def needs_conversion(filename):
+    &#34;&#34;&#34;Simple check whether a file needs conversion to .wav
+    
+    Arguments:
+        filename {str} -- filename including extension      
+    
+    Returns:
+        bool -- [description]
+    &#34;&#34;&#34;
+    return filename.split(&#39;.&#39;)[1] == &#34;mp3&#34;
+
+
+class AudioFile():
+    &#34;&#34;&#34;Simple class representing an audiofile. Houses all the needed variables
+    &#34;&#34;&#34;
+    def __init__(self, fs_rate, signal, filename):
+        self.fs_rate = fs_rate
+        self.signal = signal
+        self.filename = filename
+
+    def analyze(self):
+        &#34;&#34;&#34;Analyzes the audiofile data and saves it in local variables
+        &#34;&#34;&#34;
+        self.channels = len(self.signal.shape)
+        # print(&#34;Channels&#34;, channels)
+        if self.channels == 2:
+            self.signal = self.signal.sum(axis=1) / 2
+        self.N = self.signal.shape[0]
+        # print(&#34;Complete Samplings N&#34;, N)
+        self.secs = self.N / float(self.fs_rate)
+        # print(&#34;secs&#34;, secs)
+        self.Ts = 1.0 / self.fs_rate  # sampling interval in time
+        # print(&#34;Timestep between samples Ts&#34;, Ts)
+        self.t = arange(0, self.secs, self.Ts)  # time vector as scipy arange field / numpy.ndarray
+
+        self.FFT = abs(fft(self.signal))
+        self.FFT_side = self.FFT[range(self.N // 2)]  # one side FFT range
+        self.freqs = fftfreq(self.signal.size, self.t[1] - self.t[0])
+        self.fft_freqs = np.array(self.freqs)
+        self.freqs_side = self.freqs[range(self.N // 2)]  # one side frequency range</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="carcollect.analyze.audiofile_upload"><code class="name flex">
+<span>def <span class="ident">audiofile_upload</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Redirects user to upload page</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>template</code> &ndash; <code>upload</code> <code>page</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@bp.route(&#39;/upload&#39;, methods=(&#39;GET&#39;, &#39;POST&#39;))
+def audiofile_upload():
+    &#34;&#34;&#34;Redirects user to upload page
+    
+    Returns:
+        template -- upload page
+    &#34;&#34;&#34;
+    return upload(PATH, ALLOWED_EXTENSIONS)</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.audiofile_uploads"><code class="name flex">
+<span>def <span class="ident">audiofile_uploads</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Redirects user to uploads while passing some params</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>template</code> &ndash; <code>uploads</code> <code>page</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@bp.route(&#39;/uploads&#39;, methods=(&#39;GET&#39;, &#39;POST&#39;))
+@login_required
+def audiofile_uploads():
+    &#34;&#34;&#34;Redirects user to uploads while passing some params
+    
+    Returns:
+        template -- uploads page
+    &#34;&#34;&#34;
+    return uploads(PATH)</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.convert_mp3_to_wav"><code class="name flex">
+<span>def <span class="ident">convert_mp3_to_wav</span></span>(<span>source)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>convert mp3 files to wav format.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>source</code></strong> :&ensp;<code>str</code></dt>
+<dd>path to mp3 file</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>str</code></strong></dt>
+<dd>path to converted file</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def convert_mp3_to_wav(source):
+    &#34;&#34;&#34;convert mp3 files to wav format.
+
+    Args:
+        source (str): path to mp3 file
+
+    Returns:
+        str: path to converted file
+    &#34;&#34;&#34;
+    test = source
+    filename = os.path.basename(source)
+    print(&#39;source: &#39; + test)
+
+    new_filename = f&#39;{filename.split(&#34;.&#34;)[0]}.wav&#39;
+    saving_destination = os.path.abspath(os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, new_filename))
+
+    # convert wav to mp3
+    AudioSegment.from_mp3(source).export(saving_destination, format=&#34;wav&#34;)
+    flash(&#34;File has been converted to the .wav format&#34;)
+
+    # delete old file
+    os.remove(source)
+
+    new_path = os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, new_filename)
+
+    return new_path</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.create_multiplot"><code class="name flex">
+<span>def <span class="ident">create_multiplot</span></span>(<span>audiofile)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Summary.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>audiofile</code></strong> :&ensp;<a title="carcollect.analyze.AudioFile" href="#carcollect.analyze.AudioFile"><code>AudioFile</code></a></dt>
+<dd>AudioFile object</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>data</code></strong></dt>
+<dd>encoded base64 graph data</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def create_multiplot(audiofile):
+    &#34;&#34;&#34;Summary.
+
+    Args:
+        audiofile (AudioFile): AudioFile object
+
+    Returns:
+        data: encoded base64 graph data
+    &#34;&#34;&#34;
+    t_divider = int(len(audiofile.t)/1000)
+    # freq_divider = int(len(audiofile.freqs_side)/1000)
+
+    # TODO figure out what method to use
+
+    # # plotting the signal
+    # plt.subplot(311)
+    # p1 = plt.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider], &#34;g&#34;)
+    # plt.xlabel(&#39;Time [in 100 miliseconds]&#39;)
+    # plt.ylabel(&#39;Amplitude&#39;)
+
+    # # plotting the complete fft spectrum
+    # plt.subplot(312)
+    # p2 = plt.plot(audiofile.freqs[::t_divider], audiofile.FFT[::t_divider], &#34;r&#34;)
+    # plt.xlabel(&#39;Frequency (Hz)&#39;)
+    # plt.ylabel(&#39;Count dbl-sided&#39;)
+
+    # # plotting the positive fft spectrum
+    # plt.subplot(313)
+    # p3 = plt.plot(audiofile.freqs_side[::freq_divider], abs(audiofile.FFT_side)[::freq_divider], &#34;b&#34;)
+    # plt.xlabel(&#39;Frequency (Hz)&#39;)
+    # plt.ylabel(&#39;Count single-sided&#39;)
+
+    # save_plot(plt, audiofile.filename)
+
+    # Generate the figure **without using pyplot**.
+    fig = Figure()
+    ax = fig.subplots()
+    ax.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider])
+    
+    # Save to a temporary buffer.
+    buf = BytesIO()
+    fig.savefig(buf, format=&#34;png&#34;)
+    
+    # Embed the result in the html output.
+    data = base64.b64encode(buf.getbuffer()).decode(&#34;ascii&#34;)
+
+    return data</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.needs_conversion"><code class="name flex">
+<span>def <span class="ident">needs_conversion</span></span>(<span>filename)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Simple check whether a file needs conversion to .wav</p>
+<h2 id="arguments">Arguments</h2>
+<p>filename {str} &ndash; filename including extension
+</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code> &ndash; [<code>description</code>]</dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def needs_conversion(filename):
+    &#34;&#34;&#34;Simple check whether a file needs conversion to .wav
+    
+    Arguments:
+        filename {str} -- filename including extension      
+    
+    Returns:
+        bool -- [description]
+    &#34;&#34;&#34;
+    return filename.split(&#39;.&#39;)[1] == &#34;mp3&#34;</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.plot_graphs"><code class="name flex">
+<span>def <span class="ident">plot_graphs</span></span>(<span>fs_rate, signal, filename)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Plot graphs with audio data.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>fs_rate</code></strong> :&ensp;<code>array</code></dt>
+<dd>fs_rate</dd>
+<dt><strong><code>signal</code></strong> :&ensp;<code>array</code></dt>
+<dd>signal values</dd>
+<dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
+<dd>filename</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>data</code></strong></dt>
+<dd>encoded base64 graph data</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_graphs(fs_rate, signal, filename):
+    &#34;&#34;&#34;Plot graphs with audio data.
+
+    Args:
+        fs_rate (array): fs_rate
+        signal (array): signal values
+        filename (str): filename
+
+    Returns:
+        data: encoded base64 graph data
+    &#34;&#34;&#34;
+    audiofile = AudioFile(fs_rate, signal, filename)
+    audiofile.analyze()
+    return create_multiplot(audiofile)</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.plot_waveform"><code class="name flex">
+<span>def <span class="ident">plot_waveform</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Main method that initiates the analyzation of an audiofile. Also calls
+all nesseccery functions.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Redirect</code> <code>object</code>: <code>redirect</code> <code>to</code> <code>'uploaded_file'</code> <code>page</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@bp.route(&#39;/plot&#39;, methods=(&#39;GET&#39;, &#39;POST&#39;))
+def plot_waveform():
+    &#34;&#34;&#34;Main method that initiates the analyzation of an audiofile. Also calls
+    all nesseccery functions.
+
+    Returns:
+        Redirect object: redirect to &#39;uploaded_file&#39; page
+    &#34;&#34;&#34;
+    if request.method == &#34;POST&#34;:
+        filename = request.form[&#34;filename&#34;]
+        path = os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, filename)
+        data = None
+        try:
+            if needs_conversion(filename):
+                print(&#39;file_path: &#39; + path)
+                path = convert_mp3_to_wav(path)
+                filename = os.path.basename(path)
+            
+            try:       
+                fs_rate, signal = read_audiofile(path)
+            except ValueError:
+                flash(&#39;Cannot read file, make sure the file uses a .wav or .mp3 format&#39;)
+
+            data = plot_graphs(fs_rate, signal, filename)
+
+        except FileNotFoundError:
+            flash(&#39;Something went wrong while trying to find the correct file. Please contact blablabla.....&#39;, &#39;error&#39;)
+        
+    return uploaded_file(filename, data)</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.read_audiofile"><code class="name flex">
+<span>def <span class="ident">read_audiofile</span></span>(<span>path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>read .wav files and return data.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>path</code></strong> :&ensp;<code>str</code></dt>
+<dd>Path to file including filename</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>array</code></strong>, <strong><code>array</code></strong> :&ensp;<code>fs_rate</code> <code>and</code> <code>signal</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read_audiofile(path):
+    &#34;&#34;&#34;read .wav files and return data.
+
+    Args:
+        path (str): Path to file including filename
+
+    Returns:
+        array, array: fs_rate and signal
+    &#34;&#34;&#34;
+    fs_rate, signal = wav.read(path)
+
+    return fs_rate, signal</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.save_plot"><code class="name flex">
+<span>def <span class="ident">save_plot</span></span>(<span>plt, filename)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Save a pyplot object as png</p>
+<h2 id="arguments">Arguments</h2>
+<p>plt {pyplot.plot} &ndash; the plot that needs saving
+filename {str} &ndash; filename without extension</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def save_plot(plt, filename):
+    &#34;&#34;&#34;Save a pyplot object as png
+    
+    Arguments:
+        plt {pyplot.plot} -- the plot that needs saving
+        filename {str} -- filename without extension
+    &#34;&#34;&#34;
+    plt.savefig(&#39;{}/{}.png&#39;.format(current_app.config[&#39;PLOT_FOLDER&#39;], filename.split(&#39;.&#39;)[0]))</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="carcollect.analyze.AudioFile"><code class="flex name class">
+<span>class <span class="ident">AudioFile</span></span>
+<span>(</span><span>fs_rate, signal, filename)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Simple class representing an audiofile. Houses all the needed variables</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AudioFile():
+    &#34;&#34;&#34;Simple class representing an audiofile. Houses all the needed variables
+    &#34;&#34;&#34;
+    def __init__(self, fs_rate, signal, filename):
+        self.fs_rate = fs_rate
+        self.signal = signal
+        self.filename = filename
+
+    def analyze(self):
+        &#34;&#34;&#34;Analyzes the audiofile data and saves it in local variables
+        &#34;&#34;&#34;
+        self.channels = len(self.signal.shape)
+        # print(&#34;Channels&#34;, channels)
+        if self.channels == 2:
+            self.signal = self.signal.sum(axis=1) / 2
+        self.N = self.signal.shape[0]
+        # print(&#34;Complete Samplings N&#34;, N)
+        self.secs = self.N / float(self.fs_rate)
+        # print(&#34;secs&#34;, secs)
+        self.Ts = 1.0 / self.fs_rate  # sampling interval in time
+        # print(&#34;Timestep between samples Ts&#34;, Ts)
+        self.t = arange(0, self.secs, self.Ts)  # time vector as scipy arange field / numpy.ndarray
+
+        self.FFT = abs(fft(self.signal))
+        self.FFT_side = self.FFT[range(self.N // 2)]  # one side FFT range
+        self.freqs = fftfreq(self.signal.size, self.t[1] - self.t[0])
+        self.fft_freqs = np.array(self.freqs)
+        self.freqs_side = self.freqs[range(self.N // 2)]  # one side frequency range</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="carcollect.analyze.AudioFile.analyze"><code class="name flex">
+<span>def <span class="ident">analyze</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Analyzes the audiofile data and saves it in local variables</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def analyze(self):
+    &#34;&#34;&#34;Analyzes the audiofile data and saves it in local variables
+    &#34;&#34;&#34;
+    self.channels = len(self.signal.shape)
+    # print(&#34;Channels&#34;, channels)
+    if self.channels == 2:
+        self.signal = self.signal.sum(axis=1) / 2
+    self.N = self.signal.shape[0]
+    # print(&#34;Complete Samplings N&#34;, N)
+    self.secs = self.N / float(self.fs_rate)
+    # print(&#34;secs&#34;, secs)
+    self.Ts = 1.0 / self.fs_rate  # sampling interval in time
+    # print(&#34;Timestep between samples Ts&#34;, Ts)
+    self.t = arange(0, self.secs, self.Ts)  # time vector as scipy arange field / numpy.ndarray
+
+    self.FFT = abs(fft(self.signal))
+    self.FFT_side = self.FFT[range(self.N // 2)]  # one side FFT range
+    self.freqs = fftfreq(self.signal.size, self.t[1] - self.t[0])
+    self.fft_freqs = np.array(self.freqs)
+    self.freqs_side = self.freqs[range(self.N // 2)]  # one side frequency range</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="carcollect" href="index.html">carcollect</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="two-column">
+<li><code><a title="carcollect.analyze.audiofile_upload" href="#carcollect.analyze.audiofile_upload">audiofile_upload</a></code></li>
+<li><code><a title="carcollect.analyze.audiofile_uploads" href="#carcollect.analyze.audiofile_uploads">audiofile_uploads</a></code></li>
+<li><code><a title="carcollect.analyze.convert_mp3_to_wav" href="#carcollect.analyze.convert_mp3_to_wav">convert_mp3_to_wav</a></code></li>
+<li><code><a title="carcollect.analyze.create_multiplot" href="#carcollect.analyze.create_multiplot">create_multiplot</a></code></li>
+<li><code><a title="carcollect.analyze.needs_conversion" href="#carcollect.analyze.needs_conversion">needs_conversion</a></code></li>
+<li><code><a title="carcollect.analyze.plot_graphs" href="#carcollect.analyze.plot_graphs">plot_graphs</a></code></li>
+<li><code><a title="carcollect.analyze.plot_waveform" href="#carcollect.analyze.plot_waveform">plot_waveform</a></code></li>
+<li><code><a title="carcollect.analyze.read_audiofile" href="#carcollect.analyze.read_audiofile">read_audiofile</a></code></li>
+<li><code><a title="carcollect.analyze.save_plot" href="#carcollect.analyze.save_plot">save_plot</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="carcollect.analyze.AudioFile" href="#carcollect.analyze.AudioFile">AudioFile</a></code></h4>
+<ul class="">
+<li><code><a title="carcollect.analyze.AudioFile.analyze" href="#carcollect.analyze.AudioFile.analyze">analyze</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.7.2</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

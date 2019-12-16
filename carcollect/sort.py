@@ -13,9 +13,15 @@ bp = Blueprint('sort', __name__, url_prefix='/sort')
 ERRORS: List[str] = []
 
 
-# get full table from db
 def get_data(table='result'):
-    # get data from db
+    """Collect all data from database table and converts it to dict
+    
+    Keyword Arguments:
+        table {str} -- table name (default: {'result'})
+    
+    Returns:
+        dict -- all table data
+    """
     db = get_db()
     db_data = db.execute(
         'SELECT * FROM ?', table
@@ -25,11 +31,16 @@ def get_data(table='result'):
     # convert data to a simple dictionary
     to_dict(data, db_data)
 
-    # return data in dictionary
     return data
 
 
 def to_dict(data, db_data):
+    """converts sqlite.objects to dict
+    
+    Arguments:
+        data {list} -- [description]
+        db_data {SQLITE.OBJECT} -- raw database data
+    """
     for item in db_data:
         row = {
             'filename': item[0],
@@ -39,9 +50,13 @@ def to_dict(data, db_data):
         data.append(row)
 
 
-# Sorting test called by url to test functionality (temp)
 @bp.route('/test')
 def test_sorting():
+    """Method that tests the performance of the sorting process
+    
+    Returns:
+        template -- view with results
+    """
     # get dummy data
     data = [random.randrange(10000000) for _ in range(100)]
     # data = [45, 567, 3, 67, 'ertert']
@@ -60,9 +75,9 @@ def test_sorting():
 
         # making sure the correct result and/or errors are shown
         try:
-            sort_start = time.clock()
+            sort_start = time.process_time()
             sort(data, 0, n - 1)
-            sort_end = time.clock()
+            sort_end = time.process_time()
             completion_message = 'Test successful! Sorted data by {}. The list took {} seconds to sort. Array length: ' \
                                  '{}.' \
                 .format(sort_by, sort_end - sort_start, n)
@@ -74,15 +89,33 @@ def test_sorting():
     return render_template('sort/sort_test.html', errors=ERRORS, message=completion_message, result=data)
 
 
-# Main sorting function
 def sort(data, low, high):
+    """checks data formatting then starts quicksort process
+    
+    Arguments:
+        data {[type]} -- [description]
+        low {[type]} -- [description]
+        high {[type]} -- [description]
+    
+    Raises:
+        TypeError: [description]
+    """
     if not all(isinstance(x, int) for x in data):
         raise TypeError('Not all values in this collection are of type: int')
     quicksort(data, low, high)
 
 
-# partition function
 def partition(data, low, high):
+    """handles the partitioning part for quicksort. called by quicksort()
+    
+    Arguments:
+        data {simple collection} -- data to be sorted
+        low {int} -- lowest index in collection
+        high {int} -- highest index in collection
+    
+    Returns:
+        int -- the position index of the pivot point in the array
+    """
     # set the index for the lower element
     i = (low - 1)
 
@@ -104,8 +137,14 @@ def partition(data, low, high):
     return i + 1
 
 
-# The actual sorting starts here
 def quicksort(data, low, high):
+    """main quicksort method, gets claled by sort()
+    
+    Arguments:
+        data {simple collection} -- data to be sorted
+        low {int} -- lowest index in collection
+        high {int} -- highest index in collection
+    """
     if low < high:
         try:
             pi = partition(data, low, high)

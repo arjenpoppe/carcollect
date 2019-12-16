@@ -25,23 +25,31 @@ PATH = 'analyze'
 
 @bp.route('/upload', methods=('GET', 'POST'))
 def audiofile_upload():
-    # reroute to the upload page
+    """Redirects user to upload page
+    
+    Returns:
+        template -- upload page
+    """
     return upload(PATH, ALLOWED_EXTENSIONS)
 
 
 @bp.route('/uploads', methods=('GET', 'POST'))
 @login_required
 def audiofile_uploads():
-    # reroute to the file list
+    """Redirects user to uploads while passing some params
+    
+    Returns:
+        template -- uploads page
+    """
     return uploads(PATH)
 
 
 def read_audiofile(path):
-    """read .wav files and return data
-    
+    """read .wav files and return data.
+
     Args:
         path (str): Path to file including filename
-    
+
     Returns:
         array, array: fs_rate and signal
     """
@@ -51,11 +59,11 @@ def read_audiofile(path):
 
 
 def convert_mp3_to_wav(source):
-    """convert mp3 files to wav format
-    
+    """convert mp3 files to wav format.
+
     Args:
         source (str): path to mp3 file
-    
+
     Returns:
         str: path to converted file
     """
@@ -79,13 +87,13 @@ def convert_mp3_to_wav(source):
 
 
 def plot_graphs(fs_rate, signal, filename):
-    """Plot graphs with audio data
-    
+    """Plot graphs with audio data.
+
     Args:
         fs_rate (array): fs_rate
         signal (array): signal values
         filename (str): filename
-    
+
     Returns:
         data: encoded base64 graph data
     """
@@ -95,11 +103,11 @@ def plot_graphs(fs_rate, signal, filename):
 
 
 def create_multiplot(audiofile):
-    """Summary
-    
+    """Summary.
+
     Args:
         audiofile (AudioFile): AudioFile object
-    
+
     Returns:
         data: encoded base64 graph data
     """
@@ -144,15 +152,20 @@ def create_multiplot(audiofile):
 
 
 def save_plot(plt, filename):
-    # save plot in predefined location
+    """Save a pyplot object as png
+    
+    Arguments:
+        plt {pyplot.plot} -- the plot that needs saving
+        filename {str} -- filename without extension
+    """
     plt.savefig('{}/{}.png'.format(current_app.config['PLOT_FOLDER'], filename.split('.')[0]))
 
 
 @bp.route('/plot', methods=('GET', 'POST'))
 def plot_waveform():
-    """Main method that initiates the analyzation of an audiofile. Also calls all nesseccery 
-    functions
-    
+    """Main method that initiates the analyzation of an audiofile. Also calls
+    all nesseccery functions.
+
     Returns:
         Redirect object: redirect to 'uploaded_file' page
     """
@@ -180,35 +193,28 @@ def plot_waveform():
 
 
 def needs_conversion(filename):
+    """Simple check whether a file needs conversion to .wav
+    
+    Arguments:
+        filename {str} -- filename including extension      
+    
+    Returns:
+        bool -- [description]
+    """
     return filename.split('.')[1] == "mp3"
 
 
 class AudioFile():
-
-    """Summary
-    
-    Attributes:
-        channels (TYPE): Description
-        FFT (TYPE): Description
-        fft_freqs (TYPE): Description
-        FFT_side (TYPE): Description
-        filename (TYPE): Description
-        freqs (TYPE): Description
-        freqs_side (TYPE): Description
-        fs_rate (TYPE): Description
-        N (TYPE): Description
-        secs (TYPE): Description
-        signal (TYPE): Description
-        t (TYPE): Description
-        Ts (TYPE): Description
+    """Simple class representing an audiofile. Houses all the needed variables
     """
-    
     def __init__(self, fs_rate, signal, filename):
         self.fs_rate = fs_rate
         self.signal = signal
         self.filename = filename
 
     def analyze(self):
+        """Analyzes the audiofile data and saves it in local variables
+        """
         self.channels = len(self.signal.shape)
         # print("Channels", channels)
         if self.channels == 2:
