@@ -29,11 +29,3 @@ def test_create_plot_data(client):
 
 def test_non_audio_file(client):
 	pass
-
-
-
-# def test_allowed_extensions(client):
-# 	response = client.get('/analyze/upload')
-# 	assert response.data == 'Upload new File'
-
-# def t
