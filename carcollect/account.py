@@ -9,10 +9,26 @@ from carcollect.db import get_db
 bp = Blueprint('account', __name__, url_prefix='/account')
 
 
+def login_required(view):
+    """Handles authentication for pages that require logging in.
+
+    Args:
+        view (Wrapper): Description
+    """
+    @functools.wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if g.user is None:
+            flash('You need to be logged in to view this page.')
+            return redirect(url_for('account.login'))
+        return view(*args, **kwargs)
+
+    return wrapped_view
+
+
 @bp.route('/login', methods=["POST", "GET"])
 def login():
-    """Return login view, also handles the actual authentication
-    
+    """Return login view, also handles the actual authentication.
+
     Returns:
         template: Default login page
     """
@@ -24,7 +40,6 @@ def login():
         session.permanent = True
         email = request.form["email"]
         password = request.form["password"]
-        db = get_db()
         user = get_user_by_email(email)
         
         error = authenticate(user, password)  
@@ -39,12 +54,12 @@ def login():
 
 
 def authenticate(user, password):
-    """Summary
-    
+    """Summary.
+
     Args:
         user (sqlite.object): user database object
         password (str): password
-    
+
     Returns:
         str: Error message
     """
@@ -56,8 +71,8 @@ def authenticate(user, password):
 
 @bp.route('/create_account', methods=["POST", "GET"])
 def create_account():
-    """Return default account creation view and does the actual registration
-    
+    """Return default account creation view and does the actual registration.
+
     Returns:
         template: Description
     """
@@ -80,8 +95,7 @@ def create_account():
             error = 'Password is required.'
             
         elif get_user_by_email(email) is not None:
-            error = f'Email {email} already exists in our database. It is not possible to recover your account. Good ' \
-                    f'luck remembering the password.'
+            error = f'Email {email} already exists in our database.'
 
         if error is None:
             db.execute('INSERT INTO user (firstname, lastname, email, password) VALUES (?, ?, ?, ?)',
@@ -95,19 +109,16 @@ def create_account():
     return render_template('account/create_account.html')
 
 
-@bp.route('/user', methods=["POST", "GET"])
+@bp.route('/user')
+@login_required
 def user():
-    """Default user page
-    
+    """Default user page.
+
     Returns:
         template: user page template
     """
-    if is_logged_in():
-        user = get_user_by_id(session['user_id'])
-
-        return render_template('account/user.html', user=user)
-    else:
-        return redirect(url_for('account.login'))
+    user = get_user_by_id(session['user_id'])
+    return render_template('account/user.html', user=user)
 
 
 @bp.route('/logout')
@@ -135,7 +146,9 @@ def get_user_by_email(email):
 
 @bp.before_app_request
 def load_logged_in_user():
-    """Executed before every http request. Load the logged in user
+    """Executed before every http request.
+
+    Load the logged in user
     """
     user_id = session.get('user_id')
 
@@ -147,25 +160,9 @@ def load_logged_in_user():
         ).fetchone()
 
 
-def login_required(view):
-    """Handles authentication for pages that require logging in
-    
-    Args:
-        view (Wrapper): Description
-    """
-    @functools.wraps(view)
-    def wrapped_view(*args, **kwargs):
-        if g.user is None:
-            flash('You need to be logged in to view this page.')
-            return redirect(url_for('account.login'))
-        return view(*args, **kwargs)
-
-    return wrapped_view
-
-
 def is_logged_in():
-    """Simple check to see of user is logged in
-    
+    """Simple check to see of user is logged in.
+
     Returns:
         BOOLEAN: user logged in yes/no
     """

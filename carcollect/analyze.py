@@ -1,19 +1,19 @@
 import os
 import base64
 
-from pydub import AudioSegment
-
 from flask import (
     Blueprint, flash, redirect, render_template, request, url_for, current_app, send_from_directory
 )
 
 import matplotlib.pyplot as plt
+import numpy as np
+
+from pydub import AudioSegment
 from matplotlib.figure import Figure
 from io import BytesIO
 from scipy import arange
 from scipy.io import wavfile as wav
 from scipy.fftpack import fft, fftfreq
-import numpy as np
 
 from carcollect.filemanager import upload, uploads, uploaded_file
 from carcollect.account import login_required
@@ -23,21 +23,21 @@ bp = Blueprint('analyze', __name__, url_prefix='/analyze')
 ALLOWED_EXTENSIONS = ['mp3', 'wav']
 PATH = 'analyze'
 
-# reroute to the upload page
 @bp.route('/upload', methods=('GET', 'POST'))
 def audiofile_upload():
+    # reroute to the upload page
     return upload(PATH, ALLOWED_EXTENSIONS)
 
 
-# reroute to the file list
 @bp.route('/uploads', methods=('GET', 'POST'))
 @login_required
 def audiofile_uploads():
+    # reroute to the file list
     return uploads(PATH)
 
 
 def read_audiofile(path):
-    """read .wav files and return info
+    """read .wav files and return data
     
     Args:
         path (str): Path to file including filename
@@ -104,7 +104,7 @@ def create_multiplot(audiofile):
         data: encoded base64 graph data
     """
     t_divider = int(len(audiofile.t)/1000)
-    freq_divider = int(len(audiofile.freqs_side)/1000)
+    # freq_divider = int(len(audiofile.freqs_side)/1000)
 
     # TODO figure out what method to use
 
@@ -143,12 +143,11 @@ def create_multiplot(audiofile):
     return data
 
 
-# save plot in predefined location
 def save_plot(plt, filename):
+    # save plot in predefined location
     plt.savefig('{}/{}.png'.format(current_app.config['PLOT_FOLDER'], filename.split('.')[0]))
 
 
-# Main method that initiates the sound analysis
 @bp.route('/plot', methods=('GET', 'POST'))
 def plot_waveform():
     """Main method that initiates the analyzation of an audiofile. Also calls all nesseccery 
@@ -162,20 +161,18 @@ def plot_waveform():
         path = os.path.join(current_app.config['UPLOAD_FOLDER'], PATH, filename)
         data = None
         try:
-            # convert file if necessery
             if needs_conversion(filename):
                 print('file_path: ' + path)
                 path = convert_mp3_to_wav(path)
                 filename = os.path.basename(path)
             
-            # read audio file
             try:       
                 fs_rate, signal = read_audiofile(path)
             except ValueError:
                 flash('Cannot read file, make sure the file uses a .wav or .mp3 format')
 
-            #plot and save graphs
             data = plot_graphs(fs_rate, signal, filename)
+
         except FileNotFoundError:
             flash('Something went wrong while trying to find the correct file. Please contact blablabla.....', 'error')
         
