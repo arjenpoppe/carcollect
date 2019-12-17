@@ -7,7 +7,6 @@ from flask import (
 from subprocess import call
 from numpy import arange, take
 from pydub import AudioSegment
-from ffprobe import FFProbe
 from matplotlib.figure import Figure
 from io import BytesIO
 from scipy.io import wavfile as wav
