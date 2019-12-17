@@ -68,6 +68,7 @@ def save_file(path, file):
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir,)
     file.save(os.path.join(save_dir, filename))
+    print(&#39;file saved to filesystem...&#39;)
     return filename
 
 
@@ -129,7 +130,7 @@ def uploads(dir=&#39;&#39;):
 
 
 @bp.route(&#39;/&lt;filename&gt;&#39;)
-def uploaded_file(filename, data=None):
+def uploaded_file(filename, data=None, metadata=None):
     &#34;&#34;&#34;Simple view of the selected file
     
     Args:
@@ -139,7 +140,7 @@ def uploaded_file(filename, data=None):
     Returns:
         template: &#39;files/uploaded_file.html&#39;
     &#34;&#34;&#34;
-    return render_template(&#39;files/uploaded_file.html&#39;, filename=filename, data=data)</code></pre>
+    return render_template(&#39;files/uploaded_file.html&#39;, filename=filename, data=data, metadata=metadata)</code></pre>
 </details>
 </section>
 <section>
@@ -223,6 +224,7 @@ def uploaded_file(filename, data=None):
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir,)
     file.save(os.path.join(save_dir, filename))
+    print(&#39;file saved to filesystem...&#39;)
     return filename</code></pre>
 </details>
 </dd>
@@ -284,7 +286,7 @@ def upload(path=&#39;&#39;, allowed_extensions=[]):
 </details>
 </dd>
 <dt id="carcollect.filemanager.uploaded_file"><code class="name flex">
-<span>def <span class="ident">uploaded_file</span></span>(<span>filename, data=None)</span>
+<span>def <span class="ident">uploaded_file</span></span>(<span>filename, data=None, metadata=None)</span>
 </code></dt>
 <dd>
 <section class="desc"><p>Simple view of the selected file</p>
@@ -305,7 +307,7 @@ def upload(path=&#39;&#39;, allowed_extensions=[]):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@bp.route(&#39;/&lt;filename&gt;&#39;)
-def uploaded_file(filename, data=None):
+def uploaded_file(filename, data=None, metadata=None):
     &#34;&#34;&#34;Simple view of the selected file
     
     Args:
@@ -315,7 +317,7 @@ def uploaded_file(filename, data=None):
     Returns:
         template: &#39;files/uploaded_file.html&#39;
     &#34;&#34;&#34;
-    return render_template(&#39;files/uploaded_file.html&#39;, filename=filename, data=data)</code></pre>
+    return render_template(&#39;files/uploaded_file.html&#39;, filename=filename, data=data, metadata=metadata)</code></pre>
 </details>
 </dd>
 <dt id="carcollect.filemanager.uploads"><code class="name flex">

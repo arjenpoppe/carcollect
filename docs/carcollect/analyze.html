@@ -24,25 +24,26 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import os
-import base64
+<pre><code class="python">import os, sys, subprocess, shlex, re, datetime, base64
 
 from flask import (
     Blueprint, flash, redirect, render_template, request, url_for, current_app, send_from_directory
 )
 
-import matplotlib.pyplot as plt
-import numpy as np
-
+from subprocess import call
+from numpy import arange, take
 from pydub import AudioSegment
+from ffprobe import FFProbe
 from matplotlib.figure import Figure
 from io import BytesIO
-from scipy import arange
 from scipy.io import wavfile as wav
 from scipy.fftpack import fft, fftfreq
 
 from carcollect.filemanager import upload, uploads, uploaded_file
 from carcollect.account import login_required
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 bp = Blueprint(&#39;analyze&#39;, __name__, url_prefix=&#39;/analyze&#39;)
 
@@ -80,8 +81,31 @@ def read_audiofile(path):
         array, array: fs_rate and signal
     &#34;&#34;&#34;
     fs_rate, signal = wav.read(path)
+    metadata = probe_file(path)
+    
+    print(&#39;audiofile read...&#39;)
 
-    return fs_rate, signal
+    return fs_rate, signal, metadata
+
+
+def probe_file(filename):
+    &#34;&#34;&#34;Method to get metadata from audiofile
+    
+    Arguments:
+        filename {str} -- path to file
+    
+    Returns:
+        list -- metadata key=value pairs
+    &#34;&#34;&#34;
+    cmnd = [&#39;ffprobe&#39;, &#39;-show_entries&#39;, 
+        &#39;stream=codec_long_name,sample_rate,channels,bits_per_sample,duration,bit_rate:format=format_long_name,size&#39;, 
+        &#39;-pretty&#39;, filename]
+    p = subprocess.Popen(cmnd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(filename)
+    out, err =  p.communicate()        
+    metadata = out.decode(&#34;utf-8&#34;).split(&#34;\n&#34;)
+    
+    return metadata
 
 
 def convert_mp3_to_wav(source):
@@ -93,26 +117,20 @@ def convert_mp3_to_wav(source):
     Returns:
         str: path to converted file
     &#34;&#34;&#34;
-    test = source
     filename = os.path.basename(source)
-    print(&#39;source: &#39; + test)
 
     new_filename = f&#39;{filename.split(&#34;.&#34;)[0]}.wav&#39;
     saving_destination = os.path.abspath(os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, new_filename))
 
-    # convert wav to mp3
     AudioSegment.from_mp3(source).export(saving_destination, format=&#34;wav&#34;)
-    flash(&#34;File has been converted to the .wav format&#34;)
 
-    # delete old file
     os.remove(source)
-
     new_path = os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, new_filename)
 
     return new_path
 
 
-def plot_graphs(fs_rate, signal, filename):
+def get_plot_data(fs_rate, signal, filename):
     &#34;&#34;&#34;Plot graphs with audio data.
 
     Args:
@@ -124,11 +142,14 @@ def plot_graphs(fs_rate, signal, filename):
         data: encoded base64 graph data
     &#34;&#34;&#34;
     audiofile = AudioFile(fs_rate, signal, filename)
-    audiofile.analyze()
-    return create_multiplot(audiofile)
+    audiofile.analyze_all()
+
+    figures = collect_figures(audiofile)
+    data = encode_to_base64(figures)
+    return data
 
 
-def create_multiplot(audiofile):
+def encode_to_base64(figures):
     &#34;&#34;&#34;Summary.
 
     Args:
@@ -137,44 +158,52 @@ def create_multiplot(audiofile):
     Returns:
         data: encoded base64 graph data
     &#34;&#34;&#34;
-    t_divider = int(len(audiofile.t)/1000)
-    # freq_divider = int(len(audiofile.freqs_side)/1000)
+    data = []  
+    for figure in figures: 
+        # Save to a temporary buffer.
+        buf = BytesIO()
+        figure.savefig(buf, format=&#34;png&#34;)
 
-    # TODO figure out what method to use
-
-    # # plotting the signal
-    # plt.subplot(311)
-    # p1 = plt.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider], &#34;g&#34;)
-    # plt.xlabel(&#39;Time [in 100 miliseconds]&#39;)
-    # plt.ylabel(&#39;Amplitude&#39;)
-
-    # # plotting the complete fft spectrum
-    # plt.subplot(312)
-    # p2 = plt.plot(audiofile.freqs[::t_divider], audiofile.FFT[::t_divider], &#34;r&#34;)
-    # plt.xlabel(&#39;Frequency (Hz)&#39;)
-    # plt.ylabel(&#39;Count dbl-sided&#39;)
-
-    # # plotting the positive fft spectrum
-    # plt.subplot(313)
-    # p3 = plt.plot(audiofile.freqs_side[::freq_divider], abs(audiofile.FFT_side)[::freq_divider], &#34;b&#34;)
-    # plt.xlabel(&#39;Frequency (Hz)&#39;)
-    # plt.ylabel(&#39;Count single-sided&#39;)
-
-    # save_plot(plt, audiofile.filename)
-
-    # Generate the figure **without using pyplot**.
-    fig = Figure()
-    ax = fig.subplots()
-    ax.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider])
-    
-    # Save to a temporary buffer.
-    buf = BytesIO()
-    fig.savefig(buf, format=&#34;png&#34;)
-    
-    # Embed the result in the html output.
-    data = base64.b64encode(buf.getbuffer()).decode(&#34;ascii&#34;)
+        # Embed the result in the html output.
+        figure_data = base64.b64encode(buf.getbuffer()).decode(&#34;ascii&#34;)
+        data.append(figure_data)
 
     return data
+
+
+def collect_figures(audiofile):
+    &#34;&#34;&#34;Generate plot showing waveform
+    
+    Arguments:
+        audiofile {AudioFile} -- AudioFile object
+    
+    Returns:
+        Figure -- generated figure using audio data
+    &#34;&#34;&#34;
+    fig_signal = plot_fig(audiofile.t, audiofile.data)
+    fig_fft_spectrum = plot_fig(audiofile.freqs, audiofile.FFT)
+    fig_pos_fft_sectrum = plot_fig(audiofile.freqs_side, audiofile.FFT_side)
+
+    figures = [fig_signal, fig_fft_spectrum, fig_pos_fft_sectrum]
+
+    return figures
+
+
+def plot_fig(x, y):
+    &#34;&#34;&#34;Plots a figure
+    
+    Arguments:
+        x {collection} -- x-axis data
+        y {collection} -- y-axis data
+    
+    Returns:
+        Figure -- matplotlib.Figure
+    &#34;&#34;&#34;
+    fig = Figure()
+    ax = fig.subplots()
+    ax.plot(x, y)
+
+    return fig
 
 
 def save_plot(plt, filename):
@@ -199,23 +228,20 @@ def plot_waveform():
         filename = request.form[&#34;filename&#34;]
         path = os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, filename)
         data = None
+        metadata = None
         try:
             if needs_conversion(filename):
-                print(&#39;file_path: &#39; + path)
                 path = convert_mp3_to_wav(path)
-                filename = os.path.basename(path)
-            
+                filename = os.path.basename(path)       
             try:       
-                fs_rate, signal = read_audiofile(path)
+                fs_rate, signal, metadata = read_audiofile(path)
             except ValueError:
                 flash(&#39;Cannot read file, make sure the file uses a .wav or .mp3 format&#39;)
-
-            data = plot_graphs(fs_rate, signal, filename)
-
+            data = get_plot_data(fs_rate, signal, filename)
         except FileNotFoundError:
             flash(&#39;Something went wrong while trying to find the correct file. Please contact blablabla.....&#39;, &#39;error&#39;)
         
-    return uploaded_file(filename, data)
+    return uploaded_file(filename, data, metadata)
 
 
 def needs_conversion(filename):
@@ -233,31 +259,104 @@ def needs_conversion(filename):
 class AudioFile():
     &#34;&#34;&#34;Simple class representing an audiofile. Houses all the needed variables
     &#34;&#34;&#34;
-    def __init__(self, fs_rate, signal, filename):
-        self.fs_rate = fs_rate
-        self.signal = signal
+    def __init__(self, sample_rate, data, filename):
+        self.sample_rate = sample_rate
+        print(&#39;sample rate:&#39;, self.sample_rate)
+        self.data = data
+        print(&#34;signal length:&#34;, len(self.data))
+        print(&#39;signal example:&#39;, self.data)
         self.filename = filename
+        print(&#39;filename:&#39;, filename)
 
-    def analyze(self):
+    
+    def analyze_all(self):
         &#34;&#34;&#34;Analyzes the audiofile data and saves it in local variables
         &#34;&#34;&#34;
-        self.channels = len(self.signal.shape)
-        # print(&#34;Channels&#34;, channels)
-        if self.channels == 2:
-            self.signal = self.signal.sum(axis=1) / 2
-        self.N = self.signal.shape[0]
-        # print(&#34;Complete Samplings N&#34;, N)
-        self.secs = self.N / float(self.fs_rate)
-        # print(&#34;secs&#34;, secs)
-        self.Ts = 1.0 / self.fs_rate  # sampling interval in time
-        # print(&#34;Timestep between samples Ts&#34;, Ts)
-        self.t = arange(0, self.secs, self.Ts)  # time vector as scipy arange field / numpy.ndarray
+        self._analyze_channels()
+        self._analyze_samplings()
+        self._analyze_length()
+        self._analyze_sample_interval()
+        self._vector_to_arange()
+        self._apply_fft()       
+        print(&#39;analysis complete..&#39;)
 
-        self.FFT = abs(fft(self.signal))
-        self.FFT_side = self.FFT[range(self.N // 2)]  # one side FFT range
-        self.freqs = fftfreq(self.signal.size, self.t[1] - self.t[0])
+
+    def _analyze_channels(self):
+        &#34;&#34;&#34;analyzes the amount of audio channels existing in the file
+        &#34;&#34;&#34;
+        self.channels = len(self.data.shape)
+        print(&#34;data shape:&#34;, self.data.shape)
+        print(&#34;file has&#34;, self.channels, &#34;audio channels&#34;)
+        if self.channels == 2:
+            self.data = self.data.sum(axis=1) / 2
+            print(&#39;example 2 channel data:&#39;, self.data)
+
+
+    def _analyze_samplings(self):
+        &#34;&#34;&#34;analyzes the total amount of samples
+        &#34;&#34;&#34;
+        self.samples_ammount = self.data.shape[0]
+        print(&#34;total samplings N:&#34;, self.samples_ammount)
+
+
+    def _analyze_length(self):
+        &#34;&#34;&#34;analyzes the total length of the file
+        &#34;&#34;&#34;
+        self.secs = self.samples_ammount / float(self.sample_rate)
+        print(&#34;sound length:&#34;, str(datetime.timedelta(seconds=int(self.secs))))
+
+
+    def _analyze_sample_interval(self):
+        &#34;&#34;&#34;analyzes the time between samples
+        &#34;&#34;&#34;
+        self.sample_time = 1.0 / self.sample_rate 
+        print(&#34;sample time:&#34;, self.sample_time)
+
+    
+    def _vector_to_arange(self):
+        &#34;&#34;&#34;creates the time vector with a scipy arange field
+        &#34;&#34;&#34;
+        self.t = arange(0, self.secs, self.sample_time) 
+        print(f&#39;time vector: start = 0, end = {self.secs}, steps = {self.sample_time}&#39;)
+
+    
+    def _apply_fft(self):
+        &#34;&#34;&#34;does all the necessery fft calculations
+        &#34;&#34;&#34;
+        print(&#39;data to be transformed:&#39;, self.data, &#39;length:&#39;, len(self.data))
+        self.FFT = abs(fft(self.data))
+        print(&#39;fft completed, data:&#39;, self.FFT, &#34;length:&#34;, len(self.FFT))
+        self.FFT_side = self.FFT[range(self.samples_ammount // 2)]  
+        print(&#39;FFT_side = total amount of samples / 2&#39;)
+        self.freqs = fftfreq(self.data.size, self.t[1] - self.t[0])
+        print(&#39;calculated frequencies&#39;)
         self.fft_freqs = np.array(self.freqs)
-        self.freqs_side = self.freqs[range(self.N // 2)]  # one side frequency range</code></pre>
+        print(&#39;frequencies to np.array&#39;)
+        self.freqs_side = self.freqs[range(self.samples_ammount // 2)] 
+        print(&#39;calculated one side of frequency range&#39;)
+
+
+    # TODO figure out what method to use
+
+    # # plotting the signal
+    # plt.subplot(311)
+    # p1 = plt.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider], &#34;g&#34;)
+    # plt.xlabel(&#39;Time [in 100 miliseconds]&#39;)
+    # plt.ylabel(&#39;Amplitude&#39;)
+
+    # # plotting the complete fft spectrum
+    # plt.subplot(312)
+    # p2 = plt.plot(audiofile.freqs[::t_divider], audiofile.FFT[::t_divider], &#34;r&#34;)
+    # plt.xlabel(&#39;Frequency (Hz)&#39;)
+    # plt.ylabel(&#39;Count dbl-sided&#39;)
+
+    # # plotting the positive fft spectrum
+    # plt.subplot(313)
+    # p3 = plt.plot(audiofile.freqs_side[::freq_divider], abs(audiofile.FFT_side)[::freq_divider], &#34;b&#34;)
+    # plt.xlabel(&#39;Frequency (Hz)&#39;)
+    # plt.ylabel(&#39;Count single-sided&#39;)
+
+    # save_plot(plt, audiofile.filename)</code></pre>
 </details>
 </section>
 <section>
@@ -316,6 +415,40 @@ def audiofile_uploads():
     return uploads(PATH)</code></pre>
 </details>
 </dd>
+<dt id="carcollect.analyze.collect_figures"><code class="name flex">
+<span>def <span class="ident">collect_figures</span></span>(<span>audiofile)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Generate plot showing waveform</p>
+<h2 id="arguments">Arguments</h2>
+<p>audiofile {AudioFile} &ndash; AudioFile object</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Figure</code> &ndash; <code>generated</code> <code>figure</code> <code>using</code> <code>audio</code> <code>data</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def collect_figures(audiofile):
+    &#34;&#34;&#34;Generate plot showing waveform
+    
+    Arguments:
+        audiofile {AudioFile} -- AudioFile object
+    
+    Returns:
+        Figure -- generated figure using audio data
+    &#34;&#34;&#34;
+    fig_signal = plot_fig(audiofile.t, audiofile.data)
+    fig_fft_spectrum = plot_fig(audiofile.freqs, audiofile.FFT)
+    fig_pos_fft_sectrum = plot_fig(audiofile.freqs_side, audiofile.FFT_side)
+
+    figures = [fig_signal, fig_fft_spectrum, fig_pos_fft_sectrum]
+
+    return figures</code></pre>
+</details>
+</dd>
 <dt id="carcollect.analyze.convert_mp3_to_wav"><code class="name flex">
 <span>def <span class="ident">convert_mp3_to_wav</span></span>(<span>source)</span>
 </code></dt>
@@ -344,27 +477,21 @@ def audiofile_uploads():
     Returns:
         str: path to converted file
     &#34;&#34;&#34;
-    test = source
     filename = os.path.basename(source)
-    print(&#39;source: &#39; + test)
 
     new_filename = f&#39;{filename.split(&#34;.&#34;)[0]}.wav&#39;
     saving_destination = os.path.abspath(os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, new_filename))
 
-    # convert wav to mp3
     AudioSegment.from_mp3(source).export(saving_destination, format=&#34;wav&#34;)
-    flash(&#34;File has been converted to the .wav format&#34;)
 
-    # delete old file
     os.remove(source)
-
     new_path = os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, new_filename)
 
     return new_path</code></pre>
 </details>
 </dd>
-<dt id="carcollect.analyze.create_multiplot"><code class="name flex">
-<span>def <span class="ident">create_multiplot</span></span>(<span>audiofile)</span>
+<dt id="carcollect.analyze.encode_to_base64"><code class="name flex">
+<span>def <span class="ident">encode_to_base64</span></span>(<span>figures)</span>
 </code></dt>
 <dd>
 <section class="desc"><p>Summary.</p>
@@ -382,7 +509,7 @@ def audiofile_uploads():
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def create_multiplot(audiofile):
+<pre><code class="python">def encode_to_base64(figures):
     &#34;&#34;&#34;Summary.
 
     Args:
@@ -391,43 +518,58 @@ def audiofile_uploads():
     Returns:
         data: encoded base64 graph data
     &#34;&#34;&#34;
-    t_divider = int(len(audiofile.t)/1000)
-    # freq_divider = int(len(audiofile.freqs_side)/1000)
+    data = []  
+    for figure in figures: 
+        # Save to a temporary buffer.
+        buf = BytesIO()
+        figure.savefig(buf, format=&#34;png&#34;)
 
-    # TODO figure out what method to use
+        # Embed the result in the html output.
+        figure_data = base64.b64encode(buf.getbuffer()).decode(&#34;ascii&#34;)
+        data.append(figure_data)
 
-    # # plotting the signal
-    # plt.subplot(311)
-    # p1 = plt.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider], &#34;g&#34;)
-    # plt.xlabel(&#39;Time [in 100 miliseconds]&#39;)
-    # plt.ylabel(&#39;Amplitude&#39;)
+    return data</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.get_plot_data"><code class="name flex">
+<span>def <span class="ident">get_plot_data</span></span>(<span>fs_rate, signal, filename)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Plot graphs with audio data.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>fs_rate</code></strong> :&ensp;<code>array</code></dt>
+<dd>fs_rate</dd>
+<dt><strong><code>signal</code></strong> :&ensp;<code>array</code></dt>
+<dd>signal values</dd>
+<dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
+<dd>filename</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>data</code></strong></dt>
+<dd>encoded base64 graph data</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_plot_data(fs_rate, signal, filename):
+    &#34;&#34;&#34;Plot graphs with audio data.
 
-    # # plotting the complete fft spectrum
-    # plt.subplot(312)
-    # p2 = plt.plot(audiofile.freqs[::t_divider], audiofile.FFT[::t_divider], &#34;r&#34;)
-    # plt.xlabel(&#39;Frequency (Hz)&#39;)
-    # plt.ylabel(&#39;Count dbl-sided&#39;)
+    Args:
+        fs_rate (array): fs_rate
+        signal (array): signal values
+        filename (str): filename
 
-    # # plotting the positive fft spectrum
-    # plt.subplot(313)
-    # p3 = plt.plot(audiofile.freqs_side[::freq_divider], abs(audiofile.FFT_side)[::freq_divider], &#34;b&#34;)
-    # plt.xlabel(&#39;Frequency (Hz)&#39;)
-    # plt.ylabel(&#39;Count single-sided&#39;)
+    Returns:
+        data: encoded base64 graph data
+    &#34;&#34;&#34;
+    audiofile = AudioFile(fs_rate, signal, filename)
+    audiofile.analyze_all()
 
-    # save_plot(plt, audiofile.filename)
-
-    # Generate the figure **without using pyplot**.
-    fig = Figure()
-    ax = fig.subplots()
-    ax.plot(audiofile.t[::t_divider], audiofile.signal[::t_divider])
-    
-    # Save to a temporary buffer.
-    buf = BytesIO()
-    fig.savefig(buf, format=&#34;png&#34;)
-    
-    # Embed the result in the html output.
-    data = base64.b64encode(buf.getbuffer()).decode(&#34;ascii&#34;)
-
+    figures = collect_figures(audiofile)
+    data = encode_to_base64(figures)
     return data</code></pre>
 </details>
 </dd>
@@ -460,43 +602,38 @@ def audiofile_uploads():
     return filename.split(&#39;.&#39;)[1] == &#34;mp3&#34;</code></pre>
 </details>
 </dd>
-<dt id="carcollect.analyze.plot_graphs"><code class="name flex">
-<span>def <span class="ident">plot_graphs</span></span>(<span>fs_rate, signal, filename)</span>
+<dt id="carcollect.analyze.plot_fig"><code class="name flex">
+<span>def <span class="ident">plot_fig</span></span>(<span>x, y)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Plot graphs with audio data.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>fs_rate</code></strong> :&ensp;<code>array</code></dt>
-<dd>fs_rate</dd>
-<dt><strong><code>signal</code></strong> :&ensp;<code>array</code></dt>
-<dd>signal values</dd>
-<dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
-<dd>filename</dd>
-</dl>
+<section class="desc"><p>Plots a figure</p>
+<h2 id="arguments">Arguments</h2>
+<p>x {collection} &ndash; x-axis data
+y {collection} &ndash; y-axis data</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><strong><code>data</code></strong></dt>
-<dd>encoded base64 graph data</dd>
+<dt><code>Figure</code> &ndash; <code>matplotlib.Figure</code></dt>
+<dd>&nbsp;</dd>
 </dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_graphs(fs_rate, signal, filename):
-    &#34;&#34;&#34;Plot graphs with audio data.
-
-    Args:
-        fs_rate (array): fs_rate
-        signal (array): signal values
-        filename (str): filename
-
+<pre><code class="python">def plot_fig(x, y):
+    &#34;&#34;&#34;Plots a figure
+    
+    Arguments:
+        x {collection} -- x-axis data
+        y {collection} -- y-axis data
+    
     Returns:
-        data: encoded base64 graph data
+        Figure -- matplotlib.Figure
     &#34;&#34;&#34;
-    audiofile = AudioFile(fs_rate, signal, filename)
-    audiofile.analyze()
-    return create_multiplot(audiofile)</code></pre>
+    fig = Figure()
+    ax = fig.subplots()
+    ax.plot(x, y)
+
+    return fig</code></pre>
 </details>
 </dd>
 <dt id="carcollect.analyze.plot_waveform"><code class="name flex">
@@ -526,23 +663,56 @@ def plot_waveform():
         filename = request.form[&#34;filename&#34;]
         path = os.path.join(current_app.config[&#39;UPLOAD_FOLDER&#39;], PATH, filename)
         data = None
+        metadata = None
         try:
             if needs_conversion(filename):
-                print(&#39;file_path: &#39; + path)
                 path = convert_mp3_to_wav(path)
-                filename = os.path.basename(path)
-            
+                filename = os.path.basename(path)       
             try:       
-                fs_rate, signal = read_audiofile(path)
+                fs_rate, signal, metadata = read_audiofile(path)
             except ValueError:
                 flash(&#39;Cannot read file, make sure the file uses a .wav or .mp3 format&#39;)
-
-            data = plot_graphs(fs_rate, signal, filename)
-
+            data = get_plot_data(fs_rate, signal, filename)
         except FileNotFoundError:
             flash(&#39;Something went wrong while trying to find the correct file. Please contact blablabla.....&#39;, &#39;error&#39;)
         
-    return uploaded_file(filename, data)</code></pre>
+    return uploaded_file(filename, data, metadata)</code></pre>
+</details>
+</dd>
+<dt id="carcollect.analyze.probe_file"><code class="name flex">
+<span>def <span class="ident">probe_file</span></span>(<span>filename)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Method to get metadata from audiofile</p>
+<h2 id="arguments">Arguments</h2>
+<p>filename {str} &ndash; path to file</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code> &ndash; <code>metadata</code> <code>key</code>=<code>value</code> <code>pairs</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def probe_file(filename):
+    &#34;&#34;&#34;Method to get metadata from audiofile
+    
+    Arguments:
+        filename {str} -- path to file
+    
+    Returns:
+        list -- metadata key=value pairs
+    &#34;&#34;&#34;
+    cmnd = [&#39;ffprobe&#39;, &#39;-show_entries&#39;, 
+        &#39;stream=codec_long_name,sample_rate,channels,bits_per_sample,duration,bit_rate:format=format_long_name,size&#39;, 
+        &#39;-pretty&#39;, filename]
+    p = subprocess.Popen(cmnd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(filename)
+    out, err =  p.communicate()        
+    metadata = out.decode(&#34;utf-8&#34;).split(&#34;\n&#34;)
+    
+    return metadata</code></pre>
 </details>
 </dd>
 <dt id="carcollect.analyze.read_audiofile"><code class="name flex">
@@ -574,8 +744,11 @@ def plot_waveform():
         array, array: fs_rate and signal
     &#34;&#34;&#34;
     fs_rate, signal = wav.read(path)
+    metadata = probe_file(path)
+    
+    print(&#39;audiofile read...&#39;)
 
-    return fs_rate, signal</code></pre>
+    return fs_rate, signal, metadata</code></pre>
 </details>
 </dd>
 <dt id="carcollect.analyze.save_plot"><code class="name flex">
@@ -607,7 +780,7 @@ filename {str} &ndash; filename without extension</p></section>
 <dl>
 <dt id="carcollect.analyze.AudioFile"><code class="flex name class">
 <span>class <span class="ident">AudioFile</span></span>
-<span>(</span><span>fs_rate, signal, filename)</span>
+<span>(</span><span>sample_rate, data, filename)</span>
 </code></dt>
 <dd>
 <section class="desc"><p>Simple class representing an audiofile. Houses all the needed variables</p></section>
@@ -618,36 +791,86 @@ filename {str} &ndash; filename without extension</p></section>
 <pre><code class="python">class AudioFile():
     &#34;&#34;&#34;Simple class representing an audiofile. Houses all the needed variables
     &#34;&#34;&#34;
-    def __init__(self, fs_rate, signal, filename):
-        self.fs_rate = fs_rate
-        self.signal = signal
+    def __init__(self, sample_rate, data, filename):
+        self.sample_rate = sample_rate
+        print(&#39;sample rate:&#39;, self.sample_rate)
+        self.data = data
+        print(&#34;signal length:&#34;, len(self.data))
+        print(&#39;signal example:&#39;, self.data)
         self.filename = filename
+        print(&#39;filename:&#39;, filename)
 
-    def analyze(self):
+    
+    def analyze_all(self):
         &#34;&#34;&#34;Analyzes the audiofile data and saves it in local variables
         &#34;&#34;&#34;
-        self.channels = len(self.signal.shape)
-        # print(&#34;Channels&#34;, channels)
-        if self.channels == 2:
-            self.signal = self.signal.sum(axis=1) / 2
-        self.N = self.signal.shape[0]
-        # print(&#34;Complete Samplings N&#34;, N)
-        self.secs = self.N / float(self.fs_rate)
-        # print(&#34;secs&#34;, secs)
-        self.Ts = 1.0 / self.fs_rate  # sampling interval in time
-        # print(&#34;Timestep between samples Ts&#34;, Ts)
-        self.t = arange(0, self.secs, self.Ts)  # time vector as scipy arange field / numpy.ndarray
+        self._analyze_channels()
+        self._analyze_samplings()
+        self._analyze_length()
+        self._analyze_sample_interval()
+        self._vector_to_arange()
+        self._apply_fft()       
+        print(&#39;analysis complete..&#39;)
 
-        self.FFT = abs(fft(self.signal))
-        self.FFT_side = self.FFT[range(self.N // 2)]  # one side FFT range
-        self.freqs = fftfreq(self.signal.size, self.t[1] - self.t[0])
+
+    def _analyze_channels(self):
+        &#34;&#34;&#34;analyzes the amount of audio channels existing in the file
+        &#34;&#34;&#34;
+        self.channels = len(self.data.shape)
+        print(&#34;data shape:&#34;, self.data.shape)
+        print(&#34;file has&#34;, self.channels, &#34;audio channels&#34;)
+        if self.channels == 2:
+            self.data = self.data.sum(axis=1) / 2
+            print(&#39;example 2 channel data:&#39;, self.data)
+
+
+    def _analyze_samplings(self):
+        &#34;&#34;&#34;analyzes the total amount of samples
+        &#34;&#34;&#34;
+        self.samples_ammount = self.data.shape[0]
+        print(&#34;total samplings N:&#34;, self.samples_ammount)
+
+
+    def _analyze_length(self):
+        &#34;&#34;&#34;analyzes the total length of the file
+        &#34;&#34;&#34;
+        self.secs = self.samples_ammount / float(self.sample_rate)
+        print(&#34;sound length:&#34;, str(datetime.timedelta(seconds=int(self.secs))))
+
+
+    def _analyze_sample_interval(self):
+        &#34;&#34;&#34;analyzes the time between samples
+        &#34;&#34;&#34;
+        self.sample_time = 1.0 / self.sample_rate 
+        print(&#34;sample time:&#34;, self.sample_time)
+
+    
+    def _vector_to_arange(self):
+        &#34;&#34;&#34;creates the time vector with a scipy arange field
+        &#34;&#34;&#34;
+        self.t = arange(0, self.secs, self.sample_time) 
+        print(f&#39;time vector: start = 0, end = {self.secs}, steps = {self.sample_time}&#39;)
+
+    
+    def _apply_fft(self):
+        &#34;&#34;&#34;does all the necessery fft calculations
+        &#34;&#34;&#34;
+        print(&#39;data to be transformed:&#39;, self.data, &#39;length:&#39;, len(self.data))
+        self.FFT = abs(fft(self.data))
+        print(&#39;fft completed, data:&#39;, self.FFT, &#34;length:&#34;, len(self.FFT))
+        self.FFT_side = self.FFT[range(self.samples_ammount // 2)]  
+        print(&#39;FFT_side = total amount of samples / 2&#39;)
+        self.freqs = fftfreq(self.data.size, self.t[1] - self.t[0])
+        print(&#39;calculated frequencies&#39;)
         self.fft_freqs = np.array(self.freqs)
-        self.freqs_side = self.freqs[range(self.N // 2)]  # one side frequency range</code></pre>
+        print(&#39;frequencies to np.array&#39;)
+        self.freqs_side = self.freqs[range(self.samples_ammount // 2)] 
+        print(&#39;calculated one side of frequency range&#39;)</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
-<dt id="carcollect.analyze.AudioFile.analyze"><code class="name flex">
-<span>def <span class="ident">analyze</span></span>(<span>self)</span>
+<dt id="carcollect.analyze.AudioFile.analyze_all"><code class="name flex">
+<span>def <span class="ident">analyze_all</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <section class="desc"><p>Analyzes the audiofile data and saves it in local variables</p></section>
@@ -655,26 +878,16 @@ filename {str} &ndash; filename without extension</p></section>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def analyze(self):
+<pre><code class="python">def analyze_all(self):
     &#34;&#34;&#34;Analyzes the audiofile data and saves it in local variables
     &#34;&#34;&#34;
-    self.channels = len(self.signal.shape)
-    # print(&#34;Channels&#34;, channels)
-    if self.channels == 2:
-        self.signal = self.signal.sum(axis=1) / 2
-    self.N = self.signal.shape[0]
-    # print(&#34;Complete Samplings N&#34;, N)
-    self.secs = self.N / float(self.fs_rate)
-    # print(&#34;secs&#34;, secs)
-    self.Ts = 1.0 / self.fs_rate  # sampling interval in time
-    # print(&#34;Timestep between samples Ts&#34;, Ts)
-    self.t = arange(0, self.secs, self.Ts)  # time vector as scipy arange field / numpy.ndarray
-
-    self.FFT = abs(fft(self.signal))
-    self.FFT_side = self.FFT[range(self.N // 2)]  # one side FFT range
-    self.freqs = fftfreq(self.signal.size, self.t[1] - self.t[0])
-    self.fft_freqs = np.array(self.freqs)
-    self.freqs_side = self.freqs[range(self.N // 2)]  # one side frequency range</code></pre>
+    self._analyze_channels()
+    self._analyze_samplings()
+    self._analyze_length()
+    self._analyze_sample_interval()
+    self._vector_to_arange()
+    self._apply_fft()       
+    print(&#39;analysis complete..&#39;)</code></pre>
 </details>
 </dd>
 </dl>
@@ -697,11 +910,14 @@ filename {str} &ndash; filename without extension</p></section>
 <ul class="two-column">
 <li><code><a title="carcollect.analyze.audiofile_upload" href="#carcollect.analyze.audiofile_upload">audiofile_upload</a></code></li>
 <li><code><a title="carcollect.analyze.audiofile_uploads" href="#carcollect.analyze.audiofile_uploads">audiofile_uploads</a></code></li>
+<li><code><a title="carcollect.analyze.collect_figures" href="#carcollect.analyze.collect_figures">collect_figures</a></code></li>
 <li><code><a title="carcollect.analyze.convert_mp3_to_wav" href="#carcollect.analyze.convert_mp3_to_wav">convert_mp3_to_wav</a></code></li>
-<li><code><a title="carcollect.analyze.create_multiplot" href="#carcollect.analyze.create_multiplot">create_multiplot</a></code></li>
+<li><code><a title="carcollect.analyze.encode_to_base64" href="#carcollect.analyze.encode_to_base64">encode_to_base64</a></code></li>
+<li><code><a title="carcollect.analyze.get_plot_data" href="#carcollect.analyze.get_plot_data">get_plot_data</a></code></li>
 <li><code><a title="carcollect.analyze.needs_conversion" href="#carcollect.analyze.needs_conversion">needs_conversion</a></code></li>
-<li><code><a title="carcollect.analyze.plot_graphs" href="#carcollect.analyze.plot_graphs">plot_graphs</a></code></li>
+<li><code><a title="carcollect.analyze.plot_fig" href="#carcollect.analyze.plot_fig">plot_fig</a></code></li>
 <li><code><a title="carcollect.analyze.plot_waveform" href="#carcollect.analyze.plot_waveform">plot_waveform</a></code></li>
+<li><code><a title="carcollect.analyze.probe_file" href="#carcollect.analyze.probe_file">probe_file</a></code></li>
 <li><code><a title="carcollect.analyze.read_audiofile" href="#carcollect.analyze.read_audiofile">read_audiofile</a></code></li>
 <li><code><a title="carcollect.analyze.save_plot" href="#carcollect.analyze.save_plot">save_plot</a></code></li>
 </ul>
@@ -711,7 +927,7 @@ filename {str} &ndash; filename without extension</p></section>
 <li>
 <h4><code><a title="carcollect.analyze.AudioFile" href="#carcollect.analyze.AudioFile">AudioFile</a></code></h4>
 <ul class="">
-<li><code><a title="carcollect.analyze.AudioFile.analyze" href="#carcollect.analyze.AudioFile.analyze">analyze</a></code></li>
+<li><code><a title="carcollect.analyze.AudioFile.analyze_all" href="#carcollect.analyze.AudioFile.analyze_all">analyze_all</a></code></li>
 </ul>
 </li>
 </ul>

@@ -104,7 +104,7 @@ def uploads(dir=''):
 
 
 @bp.route('/<filename>')
-def uploaded_file(filename, data=None):
+def uploaded_file(filename, data=None, metadata=None):
     """Simple view of the selected file
     
     Args:
@@ -114,4 +114,4 @@ def uploaded_file(filename, data=None):
     Returns:
         template: 'files/uploaded_file.html'
     """
-    return render_template('files/uploaded_file.html', filename=filename, data=data)
+    return render_template('files/uploaded_file.html', filename=filename, data=data, metadata=metadata)

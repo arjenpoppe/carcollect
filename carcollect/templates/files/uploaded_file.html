@@ -5,12 +5,33 @@
 {% endblock %}
 
 {% block content %}
-	{% if data %}	  	
-	  	<div class="text-center">
-	  		<img src='data:image/png;base64,{{data}}' class="img-fluid img-thumbnail rounded" />
-	  	</div>
+	{% if data %}	
+		<div class="container">
+			<h3 class="font-weight-light text-center text-lg-center mt-4 mb-0">Results</h3>	  
+			<hr>	  
+			<div class="row text-center text-lg-center">
+				{% if data %}	  	
+					{% for figure in data %}
+						<div class="col-lg-4 col-md-3 col-3">
+							<a href="#" class="d-block mb-4 h-100">
+								<img class="img-fluid img-thumbnail" src="data:image/png;base64,{{figure}}" alt="">
+							</a>
+						</div>
+					{% endfor %}
+				{% endif %}
+			</div>
+			<hr>
+			<b>ffprobe output:</b></br>
+			{% if metadata %}	
+				{% for info in metadata %}
+					{{info}}<br/>
+				{% endfor %}
+			{% endif %}
+		</div>
 	{% endif %}
-  	<form action="{{url_for('analyze.plot_waveform')}}" method="post">
-  		<button value="{{filename}}" name="filename" type="submit" class="btn btn-primary">Analyze</button>
-  	</form>
+
+	<form action="{{url_for('analyze.plot_waveform')}}" method="post">
+		<button value="{{filename}}" name="filename" type="submit" class="btn btn-primary">Analyze</button>
+	</form>
+	 
 {% endblock %}
