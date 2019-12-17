@@ -9,7 +9,7 @@ from flask import (
 import matplotlib.pyplot as plt
 import numpy as np
 
-from numpy import arange
+from numpy import arange, take
 from pydub import AudioSegment
 from matplotlib.figure import Figure
 from io import BytesIO
@@ -138,12 +138,21 @@ def plot_figure(audiofile):
     Returns:
         Figure -- generated figure using audio data
     """
-    t_divider = int(len(audiofile.t)/1000)
+    # t_divider = int(len(audiofile.t)/100000)
     print('divider calculated..')
     fig = Figure()
     ax = fig.subplots()
     print('empty figure created..')
-    ax.plot(audiofile.t[::t_divider], audiofile.data[::t_divider])
+
+    start_index = audiofile.sample_rate * 1
+    end_index = 1
+
+    index = arange(start_index, start_index + (end_index * audiofile.sample_rate), 1)
+    data_subset = take(audiofile.data, index)
+    time_subset = take(audiofile.t, index)
+    print(data_subset)
+
+    ax.plot(time_subset, data_subset)
     print('figure done!..')
 
     return fig
@@ -219,7 +228,7 @@ class AudioFile():
         self._analyze_length()
         self._analyze_sample_interval()
         self._vector_to_arange()
-        self._apply_fft()       
+        # self._apply_fft()       
         print('analysis complete..')
 
 
